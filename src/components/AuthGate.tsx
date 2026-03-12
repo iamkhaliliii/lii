@@ -1,7 +1,15 @@
 "use client";
 import { useState, useEffect, ReactNode } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import { getAuthUser, setAuthUser, decodeGoogleJwt, isTauri } from "@/lib/auth";
+import { Lock } from "lucide-react";
+import {
+  getAuthUser,
+  setAuthUser,
+  decodeGoogleJwt,
+  isTauri,
+  verifyAdminPassword,
+  loginAsAdmin,
+} from "@/lib/auth";
 
 const GOOGLE_CLIENT_ID =
   "72760618578-ld81i1klg5uhsun6k7bim9psml68ga6p.apps.googleusercontent.com";
@@ -9,6 +17,9 @@ const GOOGLE_CLIENT_ID =
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminPass, setAdminPass] = useState("");
+  const [adminError, setAdminError] = useState(false);
 
   useEffect(() => {
     if (isTauri()) {
@@ -66,6 +77,53 @@ export default function AuthGate({ children }: { children: ReactNode }) {
               size="large"
               width={280}
             />
+            <div className="mt-4 border-t border-border pt-4">
+              {!showAdmin ? (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="flex w-full items-center justify-center gap-1.5 text-xs text-muted hover:text-foreground"
+                >
+                  <Lock size={12} />
+                  Admin
+                </button>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setAdminError(false);
+                    const ok = await verifyAdminPassword(adminPass);
+                    if (ok) {
+                      loginAsAdmin();
+                    } else {
+                      setAdminError(true);
+                    }
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    type="password"
+                    value={adminPass}
+                    onChange={(e) => {
+                      setAdminPass(e.target.value);
+                      setAdminError(false);
+                    }}
+                    placeholder="Password"
+                    className={`flex-1 rounded-lg border px-3 py-1.5 text-sm focus:outline-none ${
+                      adminError
+                        ? "border-danger"
+                        : "border-border focus:border-primary"
+                    }`}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary-hover"
+                  >
+                    Go
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </GoogleOAuthProvider>
