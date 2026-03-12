@@ -46,6 +46,14 @@ export interface HistoryEntry extends TranslationResult {
   starred: boolean;
 }
 
+export interface AuthUser {
+  email: string;
+  name: string;
+  picture: string;
+  token: string;
+  expiresAt: number;
+}
+
 export interface AppSettings {
   providers: Record<AIProvider, ProviderConfig>;
   activeProvider: AIProvider;
