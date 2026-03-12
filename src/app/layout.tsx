@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Vazirmatn } from "next/font/google";
 import "./globals.css";
+import UpdateBanner from "@/components/UpdateBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${vazirmatn.variable} antialiased`}
       >
+        <UpdateBanner />
         {children}
       </body>
     </html>
