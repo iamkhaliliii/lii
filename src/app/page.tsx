@@ -1,7 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
 import Navbar from "@/components/Navbar";
-import ProviderSelector from "@/components/ProviderSelector";
 import ContactSelector from "@/components/ContactSelector";
 import ContactDetectionBanner from "@/components/ContactDetectionBanner";
 import TranslateInput from "@/components/TranslateInput";
@@ -297,9 +296,6 @@ export default function Home() {
       <main className="mx-auto max-w-3xl px-4 pb-8">
         {/* Input Zone */}
         <section className="glass sticky top-0 z-10 -mx-4 space-y-3 px-4 pt-5 pb-4">
-          {/* Provider selector */}
-          <ProviderSelector />
-
           {/* Contact selector */}
           <ContactSelector
             contacts={contacts}
