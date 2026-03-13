@@ -10,16 +10,7 @@ interface ContactSelectorProps {
   onCreate: (name: string, relationship: ContactRelationship) => void;
 }
 
-const relationshipLabels: Record<ContactRelationship, string> = {
-  boss: "Boss",
-  colleague: "Colleague",
-  friend: "Friend",
-  client: "Client",
-  family: "Family",
-  other: "Other",
-};
-
-function getInitials(name: string): string {
+function getInitials(name: string) {
   return name
     .split(" ")
     .map((w) => w[0])
@@ -34,109 +25,114 @@ export default function ContactSelector({
   onSelect,
   onCreate,
 }: ContactSelectorProps) {
-  const [showNew, setShowNew] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newRelationship, setNewRelationship] =
-    useState<ContactRelationship>("colleague");
+  const [newRel, setNewRel] = useState<ContactRelationship>("colleague");
 
   const handleCreate = () => {
-    if (!newName.trim()) return;
-    onCreate(newName.trim(), newRelationship);
-    setNewName("");
-    setNewRelationship("colleague");
-    setShowNew(false);
+    if (newName.trim()) {
+      onCreate(newName.trim(), newRel);
+      setNewName("");
+      setNewRel("colleague");
+      setShowForm(false);
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleCreate();
-    }
-    if (e.key === "Escape") {
-      setShowNew(false);
-    }
-  };
+  const selected = contacts.find((c) => c.id === selectedContactId);
 
   return (
-    <div className="mb-3">
-      <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
-        {/* Add contact button */}
-        <button
-          onClick={() => setShowNew(!showNew)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border text-muted hover:border-primary hover:text-primary"
-          title="Add contact"
-        >
-          {showNew ? <X size={16} /> : <Plus size={16} />}
-        </button>
-
+    <div className="space-y-2">
+      <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto">
         {/* Contact avatars */}
-        {contacts.map((contact) => {
-          const isSelected = selectedContactId === contact.id;
+        {contacts.map((c) => {
+          const isSelected = c.id === selectedContactId;
           return (
             <button
-              key={contact.id}
-              onClick={() => onSelect(contact.id)}
+              key={c.id}
+              onClick={() => onSelect(c.id)}
               className="group flex shrink-0 flex-col items-center gap-1"
-              title={`${contact.name} (${relationshipLabels[contact.relationship]})`}
+              title={c.name}
             >
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white transition-all ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white transition-all ${
                   isSelected
-                    ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    ? "scale-105 ring-2 ring-primary"
                     : "group-hover:scale-105"
                 }`}
-                style={{ backgroundColor: contact.avatarColor }}
+                style={{ backgroundColor: c.avatarColor }}
               >
-                {getInitials(contact.name)}
+                {getInitials(c.name)}
               </div>
-              <span
-                className={`max-w-[56px] truncate text-[10px] leading-tight ${
-                  isSelected ? "font-medium text-primary" : "text-muted"
-                }`}
-              >
-                {contact.name}
-              </span>
             </button>
           );
         })}
+
+        {/* Add button */}
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+          >
+            <Plus size={12} />
+            <span>Add</span>
+          </button>
+        )}
       </div>
 
-      {/* New contact inline form */}
-      {showNew && (
-        <div className="animate-scale-in mt-2 flex items-center gap-2 rounded-xl border border-border bg-card p-3">
+      {/* Selected contact label */}
+      {selected && (
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <span
+            className="inline-flex h-3 w-3 items-center justify-center rounded-full text-[7px] font-bold text-white"
+            style={{ backgroundColor: selected.avatarColor }}
+          >
+            {selected.name[0].toUpperCase()}
+          </span>
+          <span>
+            {selected.name}{" "}
+            <span className="text-muted/60">· {selected.relationship}</span>
+          </span>
+        </div>
+      )}
+
+      {/* Inline creation form */}
+      {showForm && (
+        <div className="animate-scale-in flex items-center gap-2 rounded-lg border border-border bg-card p-2">
           <input
-            type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Name..."
+            placeholder="Name"
+            className="w-28 rounded-md border border-border bg-background px-2 py-1 text-xs focus:border-primary/40 focus:outline-none"
             autoFocus
-            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           />
           <select
-            value={newRelationship}
-            onChange={(e) =>
-              setNewRelationship(e.target.value as ContactRelationship)
-            }
-            className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+            value={newRel}
+            onChange={(e) => setNewRel(e.target.value as ContactRelationship)}
+            className="rounded-md border border-border bg-background px-1.5 py-1 text-xs focus:border-primary/40 focus:outline-none"
           >
-            {(
-              Object.entries(relationshipLabels) as [
-                ContactRelationship,
-                string,
-              ][]
-            ).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
+            <option value="colleague">Colleague</option>
+            <option value="boss">Boss</option>
+            <option value="friend">Friend</option>
+            <option value="client">Client</option>
+            <option value="family">Family</option>
+            <option value="other">Other</option>
           </select>
           <button
             onClick={handleCreate}
             disabled={!newName.trim()}
-            className="gradient-btn rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
           >
             Add
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(false);
+              setNewName("");
+            }}
+            className="rounded p-0.5 text-muted hover:text-foreground"
+          >
+            <X size={12} />
           </button>
         </div>
       )}

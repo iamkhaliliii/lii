@@ -1,215 +1,257 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import { useContacts } from "@/hooks/useContacts";
 import { Contact, ContactRelationship } from "@/types";
-import { Pencil, Trash2, MessageSquare, Clock } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  Users,
+  Search,
+  ArrowUpDown,
+} from "lucide-react";
 import { useToast } from "@/components/Toast";
 
-const relationshipLabels: Record<ContactRelationship, string> = {
-  boss: "Boss",
-  colleague: "Colleague",
-  friend: "Friend",
-  client: "Client",
-  family: "Family",
-  other: "Other",
-};
-
-const formalityLabels: Record<string, string> = {
-  formal: "Formal",
-  "semi-formal": "Semi-formal",
-  informal: "Informal",
-  casual: "Casual",
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
+type SortBy = "name" | "recent" | "messages";
 
 export default function ContactsPage() {
   const { contacts, remove, updateContact, loading } = useContacts();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [editRelationship, setEditRelationship] =
-    useState<ContactRelationship>("colleague");
-  const [editFormality, setEditFormality] = useState("semi-formal");
+  const [editRel, setEditRel] = useState<ContactRelationship>("colleague");
+  const [editFormality, setEditFormality] = useState<
+    Contact["preferredFormality"]
+  >("semi-formal");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("recent");
   const toast = useToast();
 
-  const startEdit = (contact: Contact) => {
-    setEditingId(contact.id);
-    setEditName(contact.name);
-    setEditRelationship(contact.relationship);
-    setEditFormality(contact.preferredFormality);
+  const startEdit = (c: Contact) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditRel(c.relationship);
+    setEditFormality(c.preferredFormality);
   };
 
-  const saveEdit = async (contact: Contact) => {
+  const saveEdit = async (c: Contact) => {
     await updateContact({
-      ...contact,
+      ...c,
       name: editName,
-      relationship: editRelationship,
-      preferredFormality: editFormality as Contact["preferredFormality"],
+      relationship: editRel,
+      preferredFormality: editFormality,
     });
     setEditingId(null);
-    toast.success("Contact updated!");
+    toast.success("Contact updated");
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (id: string) => {
     await remove(id);
-    toast.success(`${name} removed`);
+    toast.success("Contact deleted");
   };
+
+  // Filter and sort
+  const filtered = useMemo(() => {
+    let list = contacts;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((c) => c.name.toLowerCase().includes(q));
+    }
+    return [...list].sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "messages") return b.messageCount - a.messageCount;
+      return b.lastInteraction - a.lastInteraction;
+    });
+  }, [contacts, search, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold">Contacts</h1>
+        <h1 className="mb-1 text-lg font-bold">Contacts</h1>
+        <p className="mb-5 text-sm text-muted">
+          Manage your contacts for personalized translations
+        </p>
 
+        {/* Search + Sort */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={15}
+              className="absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search contacts..."
+              className="w-full rounded-full border border-border bg-card py-2 pl-9 pr-3 text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+            />
+          </div>
+          <button
+            onClick={() =>
+              setSortBy((prev) =>
+                prev === "recent"
+                  ? "name"
+                  : prev === "name"
+                    ? "messages"
+                    : "recent"
+              )
+            }
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs text-muted hover:text-foreground"
+            title={`Sort by ${sortBy}`}
+          >
+            <ArrowUpDown size={12} />
+            {sortBy === "recent"
+              ? "Recent"
+              : sortBy === "name"
+                ? "Name"
+                : "Messages"}
+          </button>
+        </div>
+
+        {/* Contact list */}
         {loading ? (
-          <p className="py-8 text-center text-sm text-muted">Loading...</p>
-        ) : contacts.length === 0 ? (
-          <div className="animate-fade-in py-16 text-center">
-            <p className="mb-2 text-sm text-muted">No contacts yet</p>
-            <p className="text-xs text-muted">
-              Add contacts from the translation page to track conversations
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-lg border border-border bg-card p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-accent" />
+                  <div className="flex-1">
+                    <div className="mb-1 h-4 w-32 rounded bg-accent" />
+                    <div className="h-3 w-20 rounded bg-accent" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center">
+            <Users size={28} className="mx-auto mb-3 text-muted/40" />
+            <p className="text-sm text-muted">
+              {search
+                ? "No contacts found"
+                : "No contacts yet — they'll be auto-created when you translate messages"}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {contacts.map((contact) => (
-              <div
-                key={contact.id}
-                className="animate-slide-up rounded-2xl border border-border bg-card p-4"
-                style={{ boxShadow: "var(--shadow-sm)" }}
-              >
-                {editingId === contact.id ? (
-                  // Edit mode
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <select
-                        value={editRelationship}
-                        onChange={(e) =>
-                          setEditRelationship(
-                            e.target.value as ContactRelationship
-                          )
-                        }
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      >
-                        {(
-                          Object.entries(relationshipLabels) as [
-                            ContactRelationship,
-                            string,
-                          ][]
-                        ).map(([val, label]) => (
-                          <option key={val} value={val}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={editFormality}
-                        onChange={(e) => setEditFormality(e.target.value)}
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      >
-                        {Object.entries(formalityLabels).map(([val, label]) => (
-                          <option key={val} value={val}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEdit(contact)}
-                        className="gradient-btn rounded-lg px-4 py-1.5 text-sm font-medium text-white"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="rounded-lg border border-border px-4 py-1.5 text-sm text-muted hover:text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  // View mode
-                  <div className="flex items-start gap-3">
+          <div className="space-y-2">
+            {filtered.map((c) => {
+              const isEditing = editingId === c.id;
+              return (
+                <div
+                  key={c.id}
+                  className="card-hover rounded-lg border border-border bg-card p-3"
+                >
+                  <div className="flex items-center gap-3">
                     {/* Avatar */}
                     <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: contact.avatarColor }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ backgroundColor: c.avatarColor }}
                     >
-                      {getInitials(contact.name)}
+                      {c.name
+                        .split(" ")
+                        .map((w) => w[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
                     </div>
 
                     {/* Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{contact.name}</h3>
-                        <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted">
-                          {relationshipLabels[contact.relationship]}
-                        </span>
-                        <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted">
-                          {formalityLabels[contact.preferredFormality]}
-                        </span>
+                    {isEditing ? (
+                      <div className="flex flex-1 flex-wrap items-center gap-2">
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-28 rounded-md border border-border bg-background px-2 py-1 text-sm focus:border-primary/40 focus:outline-none"
+                          autoFocus
+                        />
+                        <select
+                          value={editRel}
+                          onChange={(e) =>
+                            setEditRel(
+                              e.target.value as ContactRelationship
+                            )
+                          }
+                          className="rounded-md border border-border bg-background px-1.5 py-1 text-xs focus:border-primary/40 focus:outline-none"
+                        >
+                          <option value="boss">Boss</option>
+                          <option value="colleague">Colleague</option>
+                          <option value="friend">Friend</option>
+                          <option value="client">Client</option>
+                          <option value="family">Family</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <select
+                          value={editFormality}
+                          onChange={(e) =>
+                            setEditFormality(
+                              e.target.value as Contact["preferredFormality"]
+                            )
+                          }
+                          className="rounded-md border border-border bg-background px-1.5 py-1 text-xs focus:border-primary/40 focus:outline-none"
+                        >
+                          <option value="formal">Formal</option>
+                          <option value="semi-formal">Semi-formal</option>
+                          <option value="informal">Informal</option>
+                          <option value="casual">Casual</option>
+                        </select>
+                        <button
+                          onClick={() => saveEdit(c)}
+                          className="rounded-md bg-primary p-1 text-white"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="rounded-md p-1 text-muted hover:text-foreground"
+                        >
+                          <X size={12} />
+                        </button>
                       </div>
+                    ) : (
+                      <div className="flex flex-1 items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{c.name}</p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+                            <span>{c.relationship}</span>
+                            <span className="text-border">·</span>
+                            <span>{c.preferredFormality}</span>
+                            <span className="text-border">·</span>
+                            <span>
+                              {c.messageCount} message
+                              {c.messageCount !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
 
-                      {/* Stats */}
-                      <div className="mt-1 flex items-center gap-4 text-xs text-muted">
-                        <span className="flex items-center gap-1">
-                          <MessageSquare size={11} />
-                          {contact.messageCount} messages
-                        </span>
-                        {contact.lastInteraction && (
-                          <span className="flex items-center gap-1">
-                            <Clock size={11} />
-                            {new Date(
-                              contact.lastInteraction
-                            ).toLocaleDateString()}
-                          </span>
-                        )}
+                        {/* Actions */}
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <button
+                            onClick={() => startEdit(c)}
+                            className="rounded-lg p-1.5 text-muted hover:bg-accent hover:text-foreground"
+                            title="Edit"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            className="rounded-lg p-1.5 text-muted hover:bg-accent hover:text-danger"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-
-                      {/* Communication notes */}
-                      {contact.communicationNotes && (
-                        <p className="mt-2 text-xs leading-relaxed text-muted">
-                          {contact.communicationNotes}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        onClick={() => startEdit(contact)}
-                        className="rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(contact.id, contact.name)}
-                        className="rounded-lg p-2 text-muted hover:bg-accent hover:text-danger"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import ProviderSelector from "@/components/ProviderSelector";
 import ContactSelector from "@/components/ContactSelector";
+import ContactDetectionBanner from "@/components/ContactDetectionBanner";
 import TranslateInput from "@/components/TranslateInput";
 import TranslationResult from "@/components/TranslationResult";
 import ToneIndicator from "@/components/ToneIndicator";
@@ -14,10 +15,15 @@ import { useHistory } from "@/hooks/useHistory";
 import { useContacts } from "@/hooks/useContacts";
 import { ToneAnalysis, BilingualSuggestion, PersonContext } from "@/types";
 import { generateId } from "@/lib/utils";
-import { getActiveProvider, updateSettings } from "@/lib/settings";
+import { getActiveProvider } from "@/lib/settings";
 import { translateDirect, translateImageDirect } from "@/lib/ai/client-direct";
 import { providerNames } from "@/lib/ai/providers";
 import { saveContactMessage } from "@/lib/storage";
+import {
+  detectContactFromText,
+  type ParsedMessage,
+  type DetectionResult,
+} from "@/lib/contact-detection";
 
 export default function Home() {
   const { settings } = useSettings();
@@ -38,18 +44,30 @@ export default function Home() {
   const [error, setError] = useState("");
   const [hasTranslated, setHasTranslated] = useState(false);
 
+  // Detection state
+  const [detectionResult, setDetectionResult] = useState<{
+    parsed: ParsedMessage;
+    match: DetectionResult;
+  } | null>(null);
+  const [detectionConfirmed, setDetectionConfirmed] = useState(false);
+
   // Build person context if a contact is selected
-  const buildContext = useCallback(async (): Promise<
-    PersonContext | undefined
-  > => {
-    if (!selectedContactId) return undefined;
-    const ctx = await getPersonContext(selectedContactId);
-    return ctx || undefined;
-  }, [selectedContactId, getPersonContext]);
+  const buildContext = useCallback(
+    async (): Promise<PersonContext | undefined> => {
+      if (!selectedContactId) return undefined;
+      const ctx = await getPersonContext(selectedContactId);
+      return ctx || undefined;
+    },
+    [selectedContactId, getPersonContext]
+  );
 
   // Save contact message after translation
   const saveToContactHistory = useCallback(
-    async (original: string, translated: string, toneData?: ToneAnalysis) => {
+    async (
+      original: string,
+      translated: string,
+      toneData?: ToneAnalysis
+    ) => {
       if (!selectedContactId) return;
       await saveContactMessage({
         id: generateId(),
@@ -64,14 +82,85 @@ export default function Home() {
     [selectedContactId]
   );
 
+  // Smart contact detection on text change
+  const handleTextChange = useCallback(
+    (text: string) => {
+      // Don't run if contact is manually selected
+      if (selectedContactId) {
+        setDetectionResult(null);
+        return;
+      }
+      const result = detectContactFromText(text, contacts);
+      if (result.match.type === "none") {
+        setDetectionResult(null);
+      } else {
+        setDetectionResult(result);
+        setDetectionConfirmed(false);
+        // Exact match: auto-select
+        if (result.match.type === "exact") {
+          selectContact(result.match.contact.id);
+          setDetectionConfirmed(true);
+        }
+      }
+    },
+    [contacts, selectedContactId, selectContact]
+  );
+
+  // Detection banner handlers
+  const handleConfirmExact = useCallback(() => {
+    setDetectionConfirmed(true);
+  }, []);
+
+  const handleConfirmFuzzy = useCallback(() => {
+    if (detectionResult?.match.type === "fuzzy") {
+      selectContact(detectionResult.match.contact.id);
+      setDetectionConfirmed(true);
+    }
+  }, [detectionResult, selectContact]);
+
+  const handleCreateNewFromDetection = useCallback(async () => {
+    if (detectionResult?.parsed.detectedName) {
+      const contact = await createContact(
+        detectionResult.parsed.detectedName,
+        "colleague"
+      );
+      selectContact(contact.id);
+      setDetectionConfirmed(true);
+      setDetectionResult(null);
+    }
+  }, [detectionResult, createContact, selectContact]);
+
+  const handleDismissDetection = useCallback(() => {
+    setDetectionResult(null);
+  }, []);
+
   const handleTranslate = useCallback(
     async (text: string) => {
+      // Use cleaned text if contact was detected
+      let actualText = text;
+      if (detectionResult?.parsed.cleanedText && detectionConfirmed) {
+        actualText = detectionResult.parsed.cleanedText;
+      } else if (!selectedContactId && !detectionResult) {
+        // Try detection at translate time
+        const result = detectContactFromText(text, contacts);
+        if (result.match.type === "exact") {
+          selectContact(result.match.contact.id);
+          actualText = result.parsed.cleanedText;
+        } else if (
+          result.match.type === "fuzzy" ||
+          result.match.type === "new"
+        ) {
+          setDetectionResult(result);
+          return; // Pause — wait for user to confirm
+        }
+      }
+
       setLoading(true);
       setError("");
       setTranslation("");
       setTone(null);
       setSuggestions([]);
-      setOriginalText(text);
+      setOriginalText(actualText);
       setHasTranslated(true);
 
       const { provider, model, apiKey } = getActiveProvider();
@@ -88,7 +177,7 @@ export default function Home() {
           provider,
           apiKey,
           modelId: model,
-          text,
+          text: actualText,
           detectTone: settings.autoDetectTone,
           personContext,
         });
@@ -97,14 +186,27 @@ export default function Home() {
         if (data.tone) setTone(data.tone);
         if (data.suggestedResponses) setSuggestions(data.suggestedResponses);
 
-        await saveToContactHistory(text, data.translation || "", data.tone);
+        await saveToContactHistory(
+          actualText,
+          data.translation || "",
+          data.tone
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Translation failed");
       } finally {
         setLoading(false);
       }
     },
-    [settings.autoDetectTone, buildContext, saveToContactHistory]
+    [
+      settings.autoDetectTone,
+      buildContext,
+      saveToContactHistory,
+      detectionResult,
+      detectionConfirmed,
+      selectedContactId,
+      contacts,
+      selectContact,
+    ]
   );
 
   const handleImageUpload = useCallback(
@@ -184,28 +286,19 @@ export default function Home() {
 
   const { provider } = getActiveProvider();
   const activeProviderName = providerNames[provider];
+  const showDetectionBanner =
+    detectionResult &&
+    detectionResult.match.type !== "none" &&
+    !detectionConfirmed;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 pb-8">
         {/* Input Zone */}
-        <section className="sticky top-0 z-10 -mx-4 bg-background/80 px-4 pt-6 pb-4 backdrop-blur-sm">
-          {/* Header controls */}
-          <div className="mb-3 flex items-center justify-between">
-            <ProviderSelector />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={settings.autoDetectTone}
-                onChange={(e) =>
-                  updateSettings({ autoDetectTone: e.target.checked })
-                }
-                className="h-4 w-4 rounded accent-primary"
-              />
-              <span className="text-muted">Detect Tone</span>
-            </label>
-          </div>
+        <section className="glass sticky top-0 z-10 -mx-4 space-y-3 px-4 pt-5 pb-4">
+          {/* Provider selector */}
+          <ProviderSelector />
 
           {/* Contact selector */}
           <ContactSelector
@@ -215,19 +308,32 @@ export default function Home() {
             onCreate={createContact}
           />
 
+          {/* Detection banner */}
+          {showDetectionBanner && (
+            <ContactDetectionBanner
+              match={detectionResult.match}
+              detectedName={detectionResult.parsed.detectedName!}
+              onConfirmExact={handleConfirmExact}
+              onConfirmFuzzy={handleConfirmFuzzy}
+              onCreateNew={handleCreateNewFromDetection}
+              onDismiss={handleDismissDetection}
+            />
+          )}
+
           {/* Input */}
           <TranslateInput
             onTranslate={handleTranslate}
             onImageUpload={handleImageUpload}
+            onTextChange={handleTextChange}
             loading={loading}
           />
         </section>
 
         {/* Results Zone */}
-        <section className="space-y-4 pt-2">
+        <section className="space-y-3 pt-4">
           {/* Error */}
           {error && (
-            <div className="animate-slide-up rounded-xl border border-danger/20 bg-red-50 p-3 text-sm text-danger dark:bg-red-950">
+            <div className="animate-slide-up rounded-xl bg-danger-light p-3 text-sm text-danger">
               {error}
             </div>
           )}
@@ -239,9 +345,9 @@ export default function Home() {
           {!loading && translation && (
             <>
               <TranslationResult
-                translation={translation}
+                translatedText={translation}
                 onSave={handleSave}
-                providerName={activeProviderName}
+                provider={activeProviderName}
               />
 
               {tone && <ToneIndicator tone={tone} />}

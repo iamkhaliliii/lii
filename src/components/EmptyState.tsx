@@ -1,39 +1,49 @@
 "use client";
-import { Languages, ImagePlus, ArrowRight } from "lucide-react";
+import { Languages } from "lucide-react";
 
 export default function EmptyState() {
   return (
-    <div className="animate-fade-in flex flex-col items-center justify-center py-16 text-center">
-      {/* Icon composition */}
-      <div className="relative mb-6">
-        <div className="flex items-center gap-3 text-muted">
-          <div className="rounded-2xl border border-border bg-card p-4" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <Languages size={28} className="text-primary" />
-          </div>
-          <ArrowRight size={20} className="text-border" />
-          <div className="rounded-2xl border border-border bg-card p-4" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <span className="text-xl font-bold" style={{ fontFamily: "var(--font-vazirmatn), system-ui" }}>فا</span>
-          </div>
+    <div className="animate-fade-in flex flex-col items-center justify-center py-12 text-center">
+      {/* Icon with gradient circle */}
+      <div className="relative mb-5">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-2xl"
+          style={{ background: "var(--primary-muted)" }}
+        >
+          <Languages size={28} className="text-primary" />
         </div>
       </div>
 
-      <h2 className="mb-2 text-lg font-semibold text-foreground">
-        Translate English to Persian
-      </h2>
-      <p className="mb-1 text-sm text-muted">
-        Type or paste English text above to get started
+      <h3 className="mb-1.5 text-base font-semibold text-foreground">
+        Translate anything
+      </h3>
+      <p className="mb-6 max-w-xs text-sm text-muted">
+        Paste a message, screenshot, or type English text to get a Farsi
+        translation with smart reply suggestions.
       </p>
-      <div className="flex items-center gap-1.5 text-xs text-muted">
-        <ImagePlus size={12} />
-        <span>Or drop a screenshot for image translation</span>
-      </div>
 
-      {/* Keyboard shortcut hint */}
-      <div className="mt-6 flex items-center gap-1.5 text-xs text-muted">
-        <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium">⌘</kbd>
-        <span>+</span>
-        <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium">Enter</kbd>
-        <span className="ml-1">to translate</span>
+      {/* Quick start steps */}
+      <div className="flex items-center gap-3 text-xs text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-muted text-[10px] font-bold text-primary">
+            1
+          </span>
+          Paste text
+        </span>
+        <span className="text-border">→</span>
+        <span className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-muted text-[10px] font-bold text-primary">
+            2
+          </span>
+          Select contact
+        </span>
+        <span className="text-border">→</span>
+        <span className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-muted text-[10px] font-bold text-primary">
+            3
+          </span>
+          Get translation
+        </span>
       </div>
     </div>
   );

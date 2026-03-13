@@ -8,6 +8,7 @@ import {
   getRecentContactMessages,
 } from "@/lib/storage";
 import { generateId } from "@/lib/utils";
+import { matchContactByName, DetectionResult } from "@/lib/contact-detection";
 
 export function useContacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -116,6 +117,13 @@ export function useContacts() {
     [contacts]
   );
 
+  const findByName = useCallback(
+    (name: string): DetectionResult => {
+      return matchContactByName(name, contacts);
+    },
+    [contacts]
+  );
+
   const selectedContact = contacts.find((c) => c.id === selectedContactId) || null;
 
   return {
@@ -129,5 +137,6 @@ export function useContacts() {
     remove,
     updateContact,
     getPersonContext,
+    findByName,
   };
 }

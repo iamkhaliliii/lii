@@ -5,6 +5,7 @@ import { Clipboard, ImagePlus, Loader2, X, ArrowRight } from "lucide-react";
 interface TranslateInputProps {
   onTranslate: (text: string) => void;
   onImageUpload: (base64List: string[]) => void;
+  onTextChange?: (text: string) => void;
   loading: boolean;
 }
 
@@ -20,6 +21,7 @@ function readFileAsBase64(file: File): Promise<string> {
 export default function TranslateInput({
   onTranslate,
   onImageUpload,
+  onTextChange,
   loading,
 }: TranslateInputProps) {
   const [text, setText] = useState("");
@@ -34,28 +36,22 @@ export default function TranslateInput({
     const handleDragEnter = (e: DragEvent) => {
       e.preventDefault();
       dragCountRef.current++;
-      if (e.dataTransfer?.types.includes("Files")) {
-        setDragging(true);
-      }
+      if (e.dataTransfer?.types.includes("Files")) setDragging(true);
     };
     const handleDragLeave = (e: DragEvent) => {
       e.preventDefault();
       dragCountRef.current--;
       if (dragCountRef.current === 0) setDragging(false);
     };
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-    };
+    const handleDragOver = (e: DragEvent) => e.preventDefault();
     const handleDrop = async (e: DragEvent) => {
       e.preventDefault();
       dragCountRef.current = 0;
       setDragging(false);
-
       const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
         f.type.startsWith("image/")
       );
       if (files.length === 0) return;
-
       const base64List = await Promise.all(files.map(readFileAsBase64));
       setImages((prev) => [...prev, ...base64List]);
     };
@@ -72,24 +68,42 @@ export default function TranslateInput({
     };
   }, []);
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  const handleTextUpdate = useCallback(
+    (val: string) => {
+      setText(val);
+      onTextChange?.(val);
+    },
+    [onTextChange]
+  );
 
-    const imageFiles: File[] = [];
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) imageFiles.push(file);
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) imageFiles.push(file);
+        }
       }
-    }
 
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      const base64List = await Promise.all(imageFiles.map(readFileAsBase64));
-      setImages((prev) => [...prev, ...base64List]);
-    }
-  }, []);
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        const base64List = await Promise.all(imageFiles.map(readFileAsBase64));
+        setImages((prev) => [...prev, ...base64List]);
+      } else {
+        // Text paste — notify parent on next tick after textarea updates
+        setTimeout(() => {
+          if (textareaRef.current) {
+            onTextChange?.(textareaRef.current.value);
+          }
+        }, 0);
+      }
+    },
+    [onTextChange]
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -108,7 +122,7 @@ export default function TranslateInput({
     try {
       const clipText = await navigator.clipboard.readText();
       if (clipText) {
-        setText(clipText);
+        handleTextUpdate(clipText);
         textareaRef.current?.focus();
       }
     } catch {
@@ -143,41 +157,37 @@ export default function TranslateInput({
     <div>
       {/* Drop overlay */}
       {dragging && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm">
-          <div
-            className="animate-scale-in rounded-2xl border-2 border-dashed border-primary bg-card px-12 py-10 text-center"
-            style={{ boxShadow: "var(--shadow-lg)" }}
-          >
-            <ImagePlus size={48} className="mx-auto mb-3 text-primary" />
-            <p className="text-lg font-medium">Drop images here</p>
-            <p className="text-sm text-muted">PNG, JPG, WebP</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="animate-scale-in rounded-xl border-2 border-dashed border-primary bg-card px-12 py-10 text-center shadow-lg">
+            <ImagePlus size={40} className="mx-auto mb-3 text-primary" />
+            <p className="text-base font-medium">Drop images here</p>
+            <p className="text-xs text-muted">PNG, JPG, WebP</p>
           </div>
         </div>
       )}
 
-      {/* Unified input card */}
+      {/* Input card */}
       <div
-        className={`overflow-hidden rounded-2xl border bg-card transition-all ${
+        className={`overflow-hidden rounded-xl border bg-card transition-all ${
           loading
-            ? "border-primary/40"
-            : "border-border focus-within:border-primary/60"
+            ? "border-primary/30"
+            : "border-border focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/10"
         }`}
-        style={{ boxShadow: "var(--shadow-sm)" }}
       >
         {/* Text input */}
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => handleTextUpdate(e.target.value)}
           onPaste={handlePaste}
           onKeyDown={handleKeyDown}
-          placeholder="Type or paste English text... or drop a screenshot"
+          placeholder="Paste or type English text..."
           dir="ltr"
-          className="w-full border-0 bg-transparent p-4 pb-2 text-base leading-relaxed placeholder-muted focus:outline-none"
-          rows={images.length > 0 ? 2 : 4}
+          className="w-full border-0 bg-transparent p-4 pb-2 text-[15px] leading-relaxed placeholder-muted focus:outline-none"
+          rows={images.length > 0 ? 2 : 3}
         />
 
-        {/* Image previews (inside card) */}
+        {/* Image previews */}
         {images.length > 0 && (
           <div className="flex flex-wrap gap-2 px-4 pb-2">
             {images.map((img, i) => (
@@ -185,35 +195,35 @@ export default function TranslateInput({
                 <img
                   src={img}
                   alt={`Image ${i + 1}`}
-                  className="h-16 w-16 rounded-lg border border-border object-cover"
+                  className="h-14 w-14 rounded-lg border border-border object-cover"
                 />
                 <button
                   onClick={() => removeImage(i)}
-                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
                 >
-                  <X size={10} />
+                  <X size={8} />
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        {/* Toolbar (inside card) */}
-        <div className="flex items-center gap-1.5 border-t border-border/50 px-3 py-2">
+        {/* Toolbar */}
+        <div className="flex items-center gap-1 border-t border-border-subtle px-3 py-1.5">
           <button
             onClick={handlePasteFromClipboard}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+            className="rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground"
+            title="Paste from clipboard"
           >
-            <Clipboard size={13} />
-            <span>Paste</span>
+            <Clipboard size={14} />
           </button>
 
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+            className="rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground"
+            title="Upload image"
           >
-            <ImagePlus size={13} />
-            <span>Image</span>
+            <ImagePlus size={14} />
           </button>
 
           <input
@@ -228,11 +238,11 @@ export default function TranslateInput({
           <div className="flex-1" />
 
           {/* Shortcut hint */}
-          <div className="mr-2 hidden items-center gap-1 text-[10px] text-muted sm:flex">
-            <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">
+          <div className="mr-1.5 hidden items-center gap-0.5 text-[10px] text-muted/60 sm:flex">
+            <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">
               ⌘
             </kbd>
-            <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">
+            <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">
               ↵
             </kbd>
           </div>
@@ -241,12 +251,12 @@ export default function TranslateInput({
           <button
             onClick={handleTranslateClick}
             disabled={!hasContent || loading}
-            className="gradient-btn flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium text-white"
+            className="gradient-btn flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium text-white"
           >
             {loading ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={13} className="animate-spin" />
             ) : (
-              <ArrowRight size={14} />
+              <ArrowRight size={13} />
             )}
             {loading
               ? "Translating..."
