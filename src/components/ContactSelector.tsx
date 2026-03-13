@@ -78,8 +78,8 @@ export default function ContactSelector({
   if (contacts.length === 0 && !showForm) return null;
 
   return (
-    <div className="space-y-1.5">
-      <div className="hide-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 py-0.5">
+    <div className="space-y-2">
+      <div className="hide-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 py-0.5">
         {/* Contact chips */}
         {contacts.map((c) => {
           const isSelected = c.id === selectedContactId;
@@ -87,37 +87,37 @@ export default function ContactSelector({
             <button
               key={c.id}
               onClick={() => onSelect(isSelected ? null : c.id)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 rounded-full py-1.5 pr-3 pl-1.5 text-sm font-medium transition-all ${
                 isSelected
                   ? "bg-primary/10 text-primary ring-1 ring-primary/30"
                   : "bg-accent text-muted hover:text-foreground"
               }`}
             >
-              {/* Dot or avatar */}
+              {/* Avatar */}
               {c.avatarUrl ? (
                 <img
                   src={c.avatarUrl}
                   alt={c.name}
-                  className={`h-5 w-5 rounded-full object-cover ${
+                  className={`h-6 w-6 rounded-full object-cover ${
                     isSelected ? "ring-1 ring-primary/40" : ""
                   }`}
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-bold text-white`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
                   style={{ backgroundColor: isSelected ? "var(--primary)" : c.avatarColor }}
                 >
                   {c.name[0].toUpperCase()}
                 </span>
               )}
               {/* Name */}
-              <span className="max-w-[80px] truncate">
+              <span className="max-w-[88px] truncate">
                 {c.name.split(" ")[0]}
               </span>
               {/* Close X when selected */}
               {isSelected && (
-                <X size={12} className="ml-0.5 shrink-0 text-primary/60" />
+                <X size={14} className="shrink-0 text-primary/50" />
               )}
             </button>
           );
@@ -127,9 +127,9 @@ export default function ContactSelector({
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
+            className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm text-muted hover:text-foreground"
           >
-            <Plus size={12} />
+            <Plus size={14} />
             Add
           </button>
         )}
@@ -137,7 +137,7 @@ export default function ContactSelector({
 
       {/* Selected info label */}
       {selected && (
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Translating for{" "}
           <span className="font-medium text-foreground">{selected.name}</span>
           <span className="text-muted/40"> · {selected.relationship}</span>
