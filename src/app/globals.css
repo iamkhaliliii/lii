@@ -11,11 +11,11 @@
   --muted: #8b8b8b;
   --muted-foreground: #636363;
 
-  /* Brand — indigo */
-  --primary: #6366f1;
-  --primary-hover: #5558e6;
-  --primary-light: #eef2ff;
-  --primary-muted: rgba(99, 102, 241, 0.12);
+  /* Brand — black */
+  --primary: #111111;
+  --primary-hover: #333333;
+  --primary-light: #f4f4f5;
+  --primary-muted: rgba(17, 17, 17, 0.08);
 
   /* Semantic */
   --accent: #f4f4f5;
@@ -34,8 +34,8 @@
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.06);
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #6366f1, #8b5cf6);
-  --gradient-text: linear-gradient(135deg, #6366f1, #a78bfa);
+  --gradient-primary: linear-gradient(135deg, #111111, #333333);
+  --gradient-text: linear-gradient(135deg, #111111, #555555);
 
   /* Animation */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -56,10 +56,10 @@
     --muted: #71717a;
     --muted-foreground: #a1a1aa;
 
-    --primary: #818cf8;
-    --primary-hover: #a5b4fc;
-    --primary-light: rgba(129, 140, 248, 0.1);
-    --primary-muted: rgba(129, 140, 248, 0.08);
+    --primary: #e4e4e7;
+    --primary-hover: #fafafa;
+    --primary-light: rgba(228, 228, 231, 0.1);
+    --primary-muted: rgba(228, 228, 231, 0.08);
 
     --accent: #18181b;
     --success: #34d399;
@@ -75,8 +75,8 @@
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
 
-    --gradient-primary: linear-gradient(135deg, #818cf8, #a78bfa);
-    --gradient-text: linear-gradient(135deg, #818cf8, #c4b5fd);
+    --gradient-primary: linear-gradient(135deg, #d4d4d8, #fafafa);
+    --gradient-text: linear-gradient(135deg, #d4d4d8, #fafafa);
   }
 }
 
@@ -103,6 +103,11 @@
   --color-surface-hover: var(--surface-hover);
   --font-sans: var(--font-vazirmatn), var(--font-geist-sans), system-ui,
     sans-serif;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -162,6 +167,21 @@ textarea {
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bubbleIn {
+  from { opacity: 0; transform: scale(0.92) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
 .animate-slide-up {
   animation: slideUp var(--duration-normal) var(--ease-spring) both;
 }
@@ -177,6 +197,26 @@ textarea {
 .animate-slide-in-right {
   animation: slideInRight var(--duration-normal) var(--ease-spring) both;
 }
+
+.animate-slide-in-left {
+  animation: slideInLeft var(--duration-normal) var(--ease-spring) both;
+}
+
+.animate-bubble-in {
+  animation: bubbleIn var(--duration-slow) var(--ease-spring) both;
+}
+
+/* Typing indicator dots */
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: pulse-dot 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
 
 /* Shimmer skeleton */
 .shimmer {
@@ -205,7 +245,7 @@ textarea {
     transform var(--duration-fast) var(--ease-smooth);
 }
 .gradient-btn:hover {
-  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-0.5px);
 }
 .gradient-btn:active {
@@ -286,4 +326,59 @@ textarea {
 }
 .toggle-switch.active::after {
   transform: translateX(18px);
+}
+
+/* Smooth thin scrollbar for chat */
+.chat-scroll {
+  scroll-behavior: smooth;
+}
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Date separator animation */
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Tooltip arrow fix */
+.tooltip-arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: inherit;
+}
+
+/* Smooth sidebar width transition */
+.sidebar-transition {
+  transition: width var(--duration-slow) var(--ease-spring);
+}
+
+/* Active indicator line for sidebar */
+.sidebar-active-indicator {
+  position: relative;
+}
+.sidebar-active-indicator::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
 }

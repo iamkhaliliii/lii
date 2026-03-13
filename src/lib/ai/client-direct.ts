@@ -3,6 +3,7 @@ import { getModelById } from "./providers";
 import {
   buildTranslatePrompt,
   buildImageTranslatePrompt,
+  buildPolishReplyPrompt,
 } from "../prompts/translate";
 
 interface TranslateParams {
@@ -51,6 +52,18 @@ function parseAIResponse(raw: string) {
       parsed.suggestedResponses = normalizeSuggestions(
         parsed.suggestedResponses
       );
+    }
+
+    // Normalize needsResponse to boolean
+    if (parsed.needsResponse !== undefined) {
+      parsed.needsResponse = Boolean(parsed.needsResponse);
+    }
+
+    // Normalize detectedSender to string | null
+    if (parsed.tone) {
+      if (!parsed.tone.detectedSender || parsed.tone.detectedSender === "") {
+        parsed.tone.detectedSender = null;
+      }
     }
 
     return parsed;
@@ -249,4 +262,53 @@ export async function translateImageDirect(params: TranslateImageParams) {
   }
 
   return parseAIResponse(raw);
+}
+
+// ─── Polish Reply ─────────────────────────────────────────
+
+interface PolishReplyParams {
+  provider: AIProvider;
+  apiKey: string;
+  modelId: string;
+  draft: string;
+  originalMessage: string;
+}
+
+export async function polishReplyDirect(
+  params: PolishReplyParams
+): Promise<{ polished: string; farsi: string }> {
+  const model = getModelById(params.modelId);
+  const actualModelId = model?.modelId || params.modelId;
+  const systemPrompt = buildPolishReplyPrompt(params.originalMessage);
+
+  let raw: string;
+
+  switch (params.provider) {
+    case "openai":
+      raw = await callOpenAI(params.apiKey, actualModelId, systemPrompt, [
+        { role: "user", content: params.draft },
+      ]);
+      break;
+    case "anthropic":
+      raw = await callAnthropic(params.apiKey, actualModelId, systemPrompt, [
+        { role: "user", content: params.draft },
+      ]);
+      break;
+    case "google":
+      raw = await callGoogle(
+        params.apiKey,
+        actualModelId,
+        systemPrompt,
+        params.draft
+      );
+      break;
+    default:
+      throw new Error(`Unsupported provider: ${params.provider}`);
+  }
+
+  const parsed = parseAIResponse(raw);
+  return {
+    polished: parsed.polished || params.draft,
+    farsi: parsed.farsi || "",
+  };
 }

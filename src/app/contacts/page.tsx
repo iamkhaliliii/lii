@@ -126,7 +126,7 @@ export default function ContactsPage() {
   }, [contacts, search, sortBy]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       <Navbar />
 
       {/* Hidden file input for avatar upload */}
@@ -138,7 +138,8 @@ export default function ContactsPage() {
         onChange={handleFileChange}
       />
 
-      <main className="mx-auto max-w-3xl px-4 py-6">
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 text-lg font-bold">Contacts</h1>
         <p className="mb-5 text-sm text-muted">
           Manage your contacts for personalized translations
@@ -335,6 +336,7 @@ export default function ContactsPage() {
             })}
           </div>
         )}
+        </div>
       </main>
     </div>
   );

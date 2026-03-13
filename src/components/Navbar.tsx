@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Languages, History, Settings, Users } from "lucide-react";
+import { MessageCircle, Settings, Users, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Translate", icon: Languages },
+  { href: "/", label: "Chats", icon: MessageCircle },
+  { href: "/slack", label: "Slack", icon: Hash },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/history", label: "History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

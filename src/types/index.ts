@@ -26,6 +26,7 @@ export interface ToneAnalysis {
   formality: "formal" | "semi-formal" | "informal" | "casual";
   sentiment: "positive" | "neutral" | "negative" | "urgent";
   likelySender: string;
+  detectedSender?: string | null;
   context: string;
   suggestedResponseTone: string;
 }
@@ -42,6 +43,7 @@ export interface TranslationResult {
   translatedText: string;
   tone?: ToneAnalysis;
   suggestedResponses?: BilingualSuggestion[];
+  needsResponse?: boolean;
   provider: AIProvider;
   model: string;
   timestamp: number;
@@ -61,6 +63,48 @@ export interface AuthUser {
   expiresAt: number;
 }
 
+export interface SlackConfig {
+  token: string;
+  connected: boolean;
+  pinnedChannels?: string[];
+}
+
+export interface SlackConversation {
+  id: string;
+  name: string;
+  type: "dm" | "channel" | "group" | "mpim";
+  userId?: string;
+  userName?: string;
+  avatarUrl?: string;
+  memberAvatars?: string[];
+  unreadCount?: number;
+  lastMessage?: string;
+  lastTimestamp?: number;
+  isMember?: boolean;
+  pinned?: boolean;
+}
+
+export interface SlackMessage {
+  ts: string;
+  userId: string;
+  userName?: string;
+  avatarUrl?: string;
+  text: string;
+  timestamp: number;
+  threadTs?: string;
+  isThread?: boolean;
+  replyCount?: number;
+}
+
+export interface SlackUser {
+  id: string;
+  name: string;
+  realName: string;
+  displayName: string;
+  avatarUrl?: string;
+  isBot?: boolean;
+}
+
 export interface AppSettings {
   providers: Record<AIProvider, ProviderConfig>;
   activeProvider: AIProvider;
@@ -68,6 +112,7 @@ export interface AppSettings {
   autoDetectTone: boolean;
   autoSuggestResponse: boolean;
   theme: "light" | "dark" | "system";
+  slack?: SlackConfig;
 }
 
 // === NEW: Per-Person Contact ===
@@ -109,4 +154,33 @@ export interface PersonContext {
   preferredFormality: string;
   communicationNotes: string;
   recentMessages: Array<{ direction: string; text: string }>;
+}
+
+// === Chat Architecture ===
+
+export interface Conversation {
+  id: string;
+  title: string;
+  contactId?: string;
+  createdAt: number;
+  updatedAt: number;
+  messageCount: number;
+  lastMessagePreview: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  contactId?: string;
+  direction: "incoming" | "outgoing";
+  originalText: string;
+  translatedText: string;
+  tone?: ToneAnalysis;
+  suggestedResponses?: BilingualSuggestion[];
+  needsResponse?: boolean;
+  source: "text" | "image";
+  polishedReply?: string;
+  provider?: string;
+  model?: string;
+  timestamp: number;
 }

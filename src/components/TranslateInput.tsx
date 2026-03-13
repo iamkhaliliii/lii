@@ -1,12 +1,18 @@
 "use client";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Clipboard, ImagePlus, Loader2, X, ArrowRight } from "lucide-react";
+import { Clipboard, ImagePlus, X, RotateCcw } from "lucide-react";
+import InteractiveHoverButton from "@/components/ui/interactive-hover-button";
+
+type TranslateStatus = "idle" | "loading" | "success";
 
 interface TranslateInputProps {
   onTranslate: (text: string) => void;
   onImageUpload: (base64List: string[]) => void;
   onTextChange?: (text: string) => void;
+  onClear?: () => void;
   loading: boolean;
+  status?: TranslateStatus;
+  showClear?: boolean;
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -22,7 +28,10 @@ export default function TranslateInput({
   onTranslate,
   onImageUpload,
   onTextChange,
+  onClear,
   loading,
+  status = "idle",
+  showClear = false,
 }: TranslateInputProps) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -151,6 +160,13 @@ export default function TranslateInput({
     }
   };
 
+  const handleClear = () => {
+    setText("");
+    setImages([]);
+    onClear?.();
+    textareaRef.current?.focus();
+  };
+
   const hasContent = text.trim() || images.length > 0;
 
   return (
@@ -235,6 +251,16 @@ export default function TranslateInput({
             className="hidden"
           />
 
+          {showClear && (
+            <button
+              onClick={handleClear}
+              className="rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground"
+              title="New translation"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+
           <div className="flex-1" />
 
           {/* Shortcut hint */}
@@ -248,22 +274,18 @@ export default function TranslateInput({
           </div>
 
           {/* Translate button */}
-          <button
-            onClick={handleTranslateClick}
-            disabled={!hasContent || loading}
-            className="gradient-btn flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium text-white"
-          >
-            {loading ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <ArrowRight size={13} />
-            )}
-            {loading
-              ? "Translating..."
-              : images.length > 0
+          <InteractiveHoverButton
+            text={
+              images.length > 0
                 ? `Translate ${images.length} image${images.length > 1 ? "s" : ""}`
-                : "Translate"}
-          </button>
+                : "Translate"
+            }
+            loadingText="Translating..."
+            successText="Done!"
+            status={loading ? "loading" : status}
+            disabled={!hasContent || loading}
+            onClick={handleTranslateClick}
+          />
         </div>
       </div>
     </div>

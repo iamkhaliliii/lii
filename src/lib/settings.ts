@@ -2,6 +2,7 @@ import { AIProvider, AppSettings } from "@/types";
 import { isTauri } from "./auth";
 
 const SETTINGS_KEY = "lii-settings";
+const TAURI_STORE_NAME = "settings.json";
 
 const defaultSettings: AppSettings = {
   providers: {
@@ -14,7 +15,70 @@ const defaultSettings: AppSettings = {
   autoDetectTone: true,
   autoSuggestResponse: true,
   theme: "system",
+  slack: { token: "", connected: false },
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let tauriStoreInstance: any = null;
+
+async function getTauriSettingsStore() {
+  if (!tauriStoreInstance) {
+    const { load } = await import("@tauri-apps/plugin-store");
+    tauriStoreInstance = await load(TAURI_STORE_NAME, { defaults: {}, autoSave: false });
+  }
+  return tauriStoreInstance;
+}
+
+async function saveTauriSettings(settings: AppSettings): Promise<void> {
+  try {
+    const store = await getTauriSettingsStore();
+    await store.set("appSettings", settings);
+    await store.save();
+  } catch { /* ignore */ }
+}
+
+async function loadTauriSettings(): Promise<AppSettings | null> {
+  try {
+    const store = await getTauriSettingsStore();
+    return await store.get("appSettings") || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function initTauriSettings(): Promise<void> {
+  if (!isTauri()) return;
+
+  const local = getLocalSettings();
+  const persisted = await loadTauriSettings();
+
+  if (!persisted) {
+    await saveTauriSettings(local);
+    return;
+  }
+
+  const localHasContent = local.slack?.token || Object.values(local.providers).some(p => p.apiKey);
+
+  if (localHasContent) {
+    const merged: AppSettings = {
+      ...persisted,
+      ...local,
+      slack: {
+        token: "",
+        connected: false,
+        ...persisted.slack,
+        ...local.slack,
+        pinnedChannels: local.slack?.pinnedChannels?.length
+          ? local.slack.pinnedChannels
+          : persisted.slack?.pinnedChannels || [],
+      },
+    };
+    setLocalSettings(merged);
+    await saveTauriSettings(merged);
+  } else {
+    setLocalSettings(persisted);
+  }
+}
 
 // ─── Runtime mode detection ───────────────────────────────────
 function isWebMode(): boolean {
@@ -100,8 +164,9 @@ export function updateSettings(partial: Partial<AppSettings>): AppSettings {
   const updated = { ...current, ...partial };
   setLocalSettings(updated);
 
-  // Fire-and-forget save to API if in web mode
-  if (isWebMode()) {
+  if (isTauri()) {
+    saveTauriSettings(updated).catch(() => {});
+  } else if (isWebMode()) {
     saveSettingsToAPI(updated).catch(() => {});
   }
 
@@ -110,13 +175,17 @@ export function updateSettings(partial: Partial<AppSettings>): AppSettings {
 
 // ─── Async functions for hook usage ───────────────────────────
 export async function loadSettingsFromServer(): Promise<AppSettings> {
+  if (isTauri()) {
+    await initTauriSettings();
+    return getLocalSettings();
+  }
+
   if (!isWebMode()) {
     return getLocalSettings();
   }
 
   const remote = await fetchSettingsFromAPI();
   if (remote) {
-    // Sync remote settings to localStorage for fast subsequent reads
     setLocalSettings(remote);
     return remote;
   }

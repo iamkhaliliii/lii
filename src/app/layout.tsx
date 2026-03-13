@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body
-        className={`${geistSans.variable} ${vazirmatn.variable} antialiased`}
+        className={`${geistSans.variable} ${vazirmatn.variable} antialiased flex flex-col h-screen overflow-hidden`}
       >
         <ToastProvider>
           <AuthGate>
