@@ -228,9 +228,9 @@ textarea {
 
 /* Glass morphism for sticky areas */
 .glass {
-  background: rgba(250, 250, 250, 0.78);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  background: rgba(250, 250, 250, 0.55);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   /* Force GPU compositing for WebKit/Tauri */
   transform: translateZ(0);
@@ -239,7 +239,7 @@ textarea {
 }
 @media (prefers-color-scheme: dark) {
   .glass {
-    background: rgba(9, 9, 11, 0.8);
+    background: rgba(9, 9, 11, 0.6);
     border-bottom-color: rgba(255, 255, 255, 0.06);
   }
 }
