@@ -141,14 +141,23 @@ export default function HistoryPage() {
                         <div className="mb-2 flex items-center gap-2">
                           {contact && (
                             <span className="flex items-center gap-1 text-[11px] text-muted">
-                              <span
-                                className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[7px] font-bold text-white"
-                                style={{
-                                  backgroundColor: contact.avatarColor,
-                                }}
-                              >
-                                {contact.name[0].toUpperCase()}
-                              </span>
+                              {contact.avatarUrl ? (
+                                <img
+                                  src={contact.avatarUrl}
+                                  alt={contact.name}
+                                  className="h-3.5 w-3.5 rounded-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <span
+                                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[7px] font-bold text-white"
+                                  style={{
+                                    backgroundColor: contact.avatarColor,
+                                  }}
+                                >
+                                  {contact.name[0].toUpperCase()}
+                                </span>
+                              )}
                               {contact.name}
                             </span>
                           )}

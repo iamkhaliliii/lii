@@ -1,7 +1,8 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import { useContacts } from "@/hooks/useContacts";
+import { ContactAvatar } from "@/components/ContactSelector";
 import { Contact, ContactRelationship } from "@/types";
 import {
   Pencil,
@@ -11,10 +12,37 @@ import {
   Users,
   Search,
   ArrowUpDown,
+  Camera,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type SortBy = "name" | "recent" | "messages";
+
+function resizeImage(file: File, maxSize: number): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > maxSize || h > maxSize) {
+          const ratio = Math.min(maxSize / w, maxSize / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ContactsPage() {
   const { contacts, remove, updateContact, loading } = useContacts();
@@ -26,6 +54,8 @@ export default function ContactsPage() {
   >("semi-formal");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("recent");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarEditId, setAvatarEditId] = useState<string | null>(null);
   const toast = useToast();
 
   const startEdit = (c: Contact) => {
@@ -51,6 +81,36 @@ export default function ContactsPage() {
     toast.success("Contact deleted");
   };
 
+  const handleAvatarClick = (contactId: string) => {
+    setAvatarEditId(contactId);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !avatarEditId) return;
+
+    const contact = contacts.find((c) => c.id === avatarEditId);
+    if (!contact) return;
+
+    try {
+      const dataUrl = await resizeImage(file, 128);
+      await updateContact({ ...contact, avatarUrl: dataUrl });
+      toast.success("Photo updated");
+    } catch {
+      toast.error("Failed to update photo");
+    }
+
+    // Reset
+    setAvatarEditId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveAvatar = async (c: Contact) => {
+    await updateContact({ ...c, avatarUrl: undefined });
+    toast.success("Photo removed");
+  };
+
   // Filter and sort
   const filtered = useMemo(() => {
     let list = contacts;
@@ -68,6 +128,16 @@ export default function ContactsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      {/* Hidden file input for avatar upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 text-lg font-bold">Contacts</h1>
         <p className="mb-5 text-sm text-muted">
@@ -148,18 +218,20 @@ export default function ContactsPage() {
                   className="card-hover rounded-lg border border-border bg-card p-3"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Avatar */}
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                      style={{ backgroundColor: c.avatarColor }}
+                    {/* Avatar with upload overlay */}
+                    <button
+                      onClick={() => handleAvatarClick(c.id)}
+                      className="group relative shrink-0"
+                      title="Change photo"
                     >
-                      {c.name
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </div>
+                      <ContactAvatar contact={c} size="md" />
+                      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition-colors group-hover:bg-black/40">
+                        <Camera
+                          size={14}
+                          className="text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        />
+                      </div>
+                    </button>
 
                     {/* Info */}
                     {isEditing ? (
@@ -231,6 +303,15 @@ export default function ContactsPage() {
 
                         {/* Actions */}
                         <div className="flex shrink-0 items-center gap-0.5">
+                          {c.avatarUrl && (
+                            <button
+                              onClick={() => handleRemoveAvatar(c)}
+                              className="rounded-lg p-1.5 text-muted hover:bg-accent hover:text-foreground"
+                              title="Remove photo"
+                            >
+                              <X size={13} />
+                            </button>
+                          )}
                           <button
                             onClick={() => startEdit(c)}
                             className="rounded-lg p-1.5 text-muted hover:bg-accent hover:text-foreground"

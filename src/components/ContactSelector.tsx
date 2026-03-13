@@ -19,6 +19,41 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+function ContactAvatar({
+  contact,
+  size = "md",
+}: {
+  contact: Contact;
+  size?: "sm" | "md";
+}) {
+  const sizeClasses =
+    size === "sm"
+      ? "h-4 w-4 text-[7px]"
+      : "h-9 w-9 text-xs";
+
+  if (contact.avatarUrl) {
+    return (
+      <img
+        src={contact.avatarUrl}
+        alt={contact.name}
+        className={`${sizeClasses} rounded-full object-cover`}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClasses} flex items-center justify-center rounded-full font-bold text-white`}
+      style={{ backgroundColor: contact.avatarColor }}
+    >
+      {getInitials(contact.name)}
+    </div>
+  );
+}
+
+export { ContactAvatar };
+
 export default function ContactSelector({
   contacts,
   selectedContactId,
@@ -40,29 +75,50 @@ export default function ContactSelector({
 
   const selected = contacts.find((c) => c.id === selectedContactId);
 
+  if (contacts.length === 0 && !showForm) return null;
+
   return (
-    <div className="space-y-2">
-      <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto">
-        {/* Contact avatars */}
+    <div className="space-y-1.5">
+      <div className="hide-scrollbar -mx-1 flex items-center gap-1 overflow-x-auto px-1 py-0.5">
+        {/* Contact chips */}
         {contacts.map((c) => {
           const isSelected = c.id === selectedContactId;
           return (
             <button
               key={c.id}
-              onClick={() => onSelect(c.id)}
-              className="group flex shrink-0 flex-col items-center gap-1"
-              title={c.name}
+              onClick={() => onSelect(isSelected ? null : c.id)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium transition-all ${
+                isSelected
+                  ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                  : "bg-accent text-muted hover:text-foreground"
+              }`}
             >
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white transition-all ${
-                  isSelected
-                    ? "scale-105 ring-2 ring-primary"
-                    : "group-hover:scale-105"
-                }`}
-                style={{ backgroundColor: c.avatarColor }}
-              >
-                {getInitials(c.name)}
-              </div>
+              {/* Dot or avatar */}
+              {c.avatarUrl ? (
+                <img
+                  src={c.avatarUrl}
+                  alt={c.name}
+                  className={`h-4 w-4 rounded-full object-cover ${
+                    isSelected ? "ring-1 ring-primary/40" : ""
+                  }`}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full text-[7px] font-bold text-white`}
+                  style={{ backgroundColor: isSelected ? "var(--primary)" : c.avatarColor }}
+                >
+                  {c.name[0].toUpperCase()}
+                </span>
+              )}
+              {/* Name */}
+              <span className="max-w-[72px] truncate">
+                {c.name.split(" ")[0]}
+              </span>
+              {/* Close X when selected */}
+              {isSelected && (
+                <X size={10} className="ml-0.5 shrink-0 text-primary/60" />
+              )}
             </button>
           );
         })}
@@ -71,28 +127,21 @@ export default function ContactSelector({
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+            className="flex shrink-0 items-center gap-0.5 rounded-full px-2 py-1 text-[11px] text-muted hover:text-foreground"
           >
-            <Plus size={12} />
-            <span>Add</span>
+            <Plus size={11} />
+            Add
           </button>
         )}
       </div>
 
-      {/* Selected contact label */}
+      {/* Selected info label */}
       {selected && (
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          <span
-            className="inline-flex h-3 w-3 items-center justify-center rounded-full text-[7px] font-bold text-white"
-            style={{ backgroundColor: selected.avatarColor }}
-          >
-            {selected.name[0].toUpperCase()}
-          </span>
-          <span>
-            {selected.name}{" "}
-            <span className="text-muted/60">· {selected.relationship}</span>
-          </span>
-        </div>
+        <p className="text-[10px] text-muted">
+          Translating for{" "}
+          <span className="font-medium text-foreground">{selected.name}</span>
+          <span className="text-muted/40"> · {selected.relationship}</span>
+        </p>
       )}
 
       {/* Inline creation form */}

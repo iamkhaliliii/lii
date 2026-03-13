@@ -82,6 +82,7 @@ export interface Contact {
   id: string;
   name: string;
   avatarColor: string;
+  avatarUrl?: string;  // profile picture URL or base64 data URL
   relationship: ContactRelationship;
   preferredFormality: "formal" | "semi-formal" | "informal" | "casual";
   communicationNotes: string;  // AI-generated summary of style patterns
