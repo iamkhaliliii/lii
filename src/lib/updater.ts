@@ -1,13 +1,22 @@
-export async function checkForAppUpdates(silent = true) {
+export async function checkForAppUpdates() {
   // Only run in Tauri context
-  if (typeof window === "undefined" || !("__TAURI__" in window)) return null;
+  if (typeof window === "undefined" || !("__TAURI__" in window)) {
+    console.log("[updater] Not in Tauri context, skipping");
+    return null;
+  }
 
   try {
+    console.log("[updater] Checking for updates...");
     const { check } = await import("@tauri-apps/plugin-updater");
     const { relaunch } = await import("@tauri-apps/plugin-process");
 
     const update = await check();
-    if (!update) return null;
+    if (!update) {
+      console.log("[updater] No update available (already latest)");
+      return null;
+    }
+
+    console.log("[updater] Update found:", update.version);
 
     return {
       version: update.version,
@@ -38,7 +47,7 @@ export async function checkForAppUpdates(silent = true) {
       },
     };
   } catch (e) {
-    if (!silent) console.error("Update check failed:", e);
+    console.error("Update check failed:", e);
     return null;
   }
 }

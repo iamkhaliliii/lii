@@ -4,6 +4,7 @@ import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import UpdateBanner from "@/components/UpdateBanner";
 import AuthGate from "@/components/AuthGate";
+import { ToastProvider } from "@/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,10 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${vazirmatn.variable} antialiased`}
       >
-        <AuthGate>
-          <UpdateBanner />
-          {children}
-        </AuthGate>
+        <ToastProvider>
+          <AuthGate>
+            <UpdateBanner />
+            {children}
+          </AuthGate>
+        </ToastProvider>
       </body>
     </html>
   );

@@ -1,4 +1,34 @@
-export function buildTranslatePrompt(detectTone: boolean): string {
+import { PersonContext } from "@/types";
+
+function buildPersonContextBlock(ctx: PersonContext): string {
+  let block = `\n\n--- CONVERSATION CONTEXT ---
+You are helping the user communicate with "${ctx.name}" (${ctx.relationship}).
+Preferred formality with this person: ${ctx.preferredFormality}.`;
+
+  if (ctx.communicationNotes) {
+    block += `\nCommunication style notes: ${ctx.communicationNotes}`;
+  }
+
+  if (ctx.recentMessages.length > 0) {
+    block += `\n\nRecent conversation:`;
+    for (const msg of ctx.recentMessages) {
+      const label = msg.direction === "from_them" ? ctx.name : "User";
+      block += `\n${label}: ${msg.text}`;
+    }
+  }
+
+  block += `\n\nWhen suggesting responses:
+- Match the tone and formality the user typically uses with ${ctx.name}
+- Consider the conversation context above
+- Make responses feel natural for a ${ctx.relationship} relationship`;
+
+  return block;
+}
+
+export function buildTranslatePrompt(
+  detectTone: boolean,
+  personContext?: PersonContext
+): string {
   const base = `You are a professional English to Persian (Farsi) translator.
 Translate the given English text to natural, modern Persian.
 Use colloquial Persian when the source is informal.
@@ -6,9 +36,14 @@ Use formal Persian when the source is formal or professional.
 Preserve technical terms in English when commonly used in Persian tech culture (e.g., API, deploy, commit).
 Do NOT transliterate English words into Farsi script unless they are commonly used that way.`;
 
+  const personBlock = personContext
+    ? buildPersonContextBlock(personContext)
+    : "";
+
   if (!detectTone) {
     return (
       base +
+      personBlock +
       `\n\nReturn ONLY a JSON object with this structure (no markdown, no code fences):
 {"translation": "the Persian translation"}`
     );
@@ -16,6 +51,7 @@ Do NOT transliterate English words into Farsi script unless they are commonly us
 
   return (
     base +
+    personBlock +
     `\n\nAlso analyze the tone and context of the original message.
 
 Return ONLY a JSON object with this structure (no markdown, no code fences):
@@ -29,21 +65,34 @@ Return ONLY a JSON object with this structure (no markdown, no code fences):
     "suggestedResponseTone": "how to respond (e.g. polite-formal, friendly-casual)"
   },
   "suggestedResponses": [
-    "suggested Farsi response 1",
-    "suggested Farsi response 2",
-    "suggested Farsi response 3"
+    {"english": "English reply suggestion 1", "farsi": "Persian translation of reply 1"},
+    {"english": "English reply suggestion 2", "farsi": "Persian translation of reply 2"},
+    {"english": "English reply suggestion 3", "farsi": "Persian translation of reply 3"}
   ]
-}`
+}
+
+IMPORTANT for suggestedResponses:
+- "english" is the actual English reply the user would send back to the sender
+- "farsi" is the Persian translation so the user understands what they are saying
+- Make English replies natural and appropriate for the context`
   );
 }
 
-export function buildImageTranslatePrompt(detectTone: boolean): string {
+export function buildImageTranslatePrompt(
+  detectTone: boolean,
+  personContext?: PersonContext
+): string {
   const base = `Extract all English text from this image, then translate it to natural, modern Persian (Farsi).
 Preserve technical terms in English when commonly used in Persian tech culture.`;
+
+  const personBlock = personContext
+    ? buildPersonContextBlock(personContext)
+    : "";
 
   if (!detectTone) {
     return (
       base +
+      personBlock +
       `\n\nReturn ONLY a JSON object (no markdown, no code fences):
 {"extractedText": "the English text from the image", "translation": "the Persian translation"}`
     );
@@ -51,6 +100,7 @@ Preserve technical terms in English when commonly used in Persian tech culture.`
 
   return (
     base +
+    personBlock +
     `\n\nAlso analyze the tone and context.
 
 Return ONLY a JSON object (no markdown, no code fences):
@@ -65,10 +115,14 @@ Return ONLY a JSON object (no markdown, no code fences):
     "suggestedResponseTone": "how to respond"
   },
   "suggestedResponses": [
-    "suggested Farsi response 1",
-    "suggested Farsi response 2",
-    "suggested Farsi response 3"
+    {"english": "English reply suggestion 1", "farsi": "Persian translation of reply 1"},
+    {"english": "English reply suggestion 2", "farsi": "Persian translation of reply 2"},
+    {"english": "English reply suggestion 3", "farsi": "Persian translation of reply 3"}
   ]
-}`
+}
+
+IMPORTANT for suggestedResponses:
+- "english" is the actual English reply the user would send back
+- "farsi" is the Persian translation so the user understands what they are saying`
   );
 }

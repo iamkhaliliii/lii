@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Clipboard, ImagePlus, Loader2, X } from "lucide-react";
+import { Clipboard, ImagePlus, Loader2, X, ArrowRight } from "lucide-react";
 
 interface TranslateInputProps {
   onTranslate: (text: string) => void;
@@ -137,12 +137,17 @@ export default function TranslateInput({
     }
   };
 
+  const hasContent = text.trim() || images.length > 0;
+
   return (
-    <div className="space-y-3">
+    <div>
       {/* Drop overlay */}
       {dragging && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm">
-          <div className="rounded-2xl border-2 border-dashed border-primary bg-card px-12 py-10 text-center shadow-lg">
+          <div
+            className="animate-scale-in rounded-2xl border-2 border-dashed border-primary bg-card px-12 py-10 text-center"
+            style={{ boxShadow: "var(--shadow-lg)" }}
+          >
             <ImagePlus size={48} className="mx-auto mb-3 text-primary" />
             <p className="text-lg font-medium">Drop images here</p>
             <p className="text-sm text-muted">PNG, JPG, WebP</p>
@@ -150,77 +155,106 @@ export default function TranslateInput({
         </div>
       )}
 
-      {/* Text input */}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onPaste={handlePaste}
-        onKeyDown={handleKeyDown}
-        placeholder="Type or paste English text here... (or drop/paste images)"
-        dir="ltr"
-        className="w-full rounded-xl border border-border bg-card p-4 text-base leading-relaxed placeholder-muted focus:border-primary focus:outline-none"
-        rows={images.length > 0 ? 3 : 5}
-      />
-
-      {/* Image previews */}
-      {images.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {images.map((img, i) => (
-            <div key={i} className="group relative">
-              <img
-                src={img}
-                alt={`Image ${i + 1}`}
-                className="h-20 w-20 rounded-lg border border-border object-cover"
-              />
-              <button
-                onClick={() => removeImage(i)}
-                className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handlePasteFromClipboard}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-accent hover:text-foreground"
-        >
-          <Clipboard size={14} />
-          <span>Paste</span>
-        </button>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-accent hover:text-foreground"
-        >
-          <ImagePlus size={14} />
-          <span>Image</span>
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-          className="hidden"
+      {/* Unified input card */}
+      <div
+        className={`overflow-hidden rounded-2xl border bg-card transition-all ${
+          loading
+            ? "border-primary/40"
+            : "border-border focus-within:border-primary/60"
+        }`}
+        style={{ boxShadow: "var(--shadow-sm)" }}
+      >
+        {/* Text input */}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
+          placeholder="Type or paste English text... or drop a screenshot"
+          dir="ltr"
+          className="w-full border-0 bg-transparent p-4 pb-2 text-base leading-relaxed placeholder-muted focus:outline-none"
+          rows={images.length > 0 ? 2 : 4}
         />
 
-        <div className="flex-1" />
+        {/* Image previews (inside card) */}
+        {images.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-4 pb-2">
+            {images.map((img, i) => (
+              <div key={i} className="group relative">
+                <img
+                  src={img}
+                  alt={`Image ${i + 1}`}
+                  className="h-16 w-16 rounded-lg border border-border object-cover"
+                />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <button
-          onClick={handleTranslateClick}
-          disabled={(!text.trim() && images.length === 0) || loading}
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-        >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-          Translate{images.length > 0 ? ` (${images.length} image${images.length > 1 ? "s" : ""})` : ""}
-        </button>
+        {/* Toolbar (inside card) */}
+        <div className="flex items-center gap-1.5 border-t border-border/50 px-3 py-2">
+          <button
+            onClick={handlePasteFromClipboard}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+          >
+            <Clipboard size={13} />
+            <span>Paste</span>
+          </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted hover:bg-accent hover:text-foreground"
+          >
+            <ImagePlus size={13} />
+            <span>Image</span>
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          <div className="flex-1" />
+
+          {/* Shortcut hint */}
+          <div className="mr-2 hidden items-center gap-1 text-[10px] text-muted sm:flex">
+            <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">
+              ⌘
+            </kbd>
+            <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">
+              ↵
+            </kbd>
+          </div>
+
+          {/* Translate button */}
+          <button
+            onClick={handleTranslateClick}
+            disabled={!hasContent || loading}
+            className="gradient-btn flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium text-white"
+          >
+            {loading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <ArrowRight size={14} />
+            )}
+            {loading
+              ? "Translating..."
+              : images.length > 0
+                ? `Translate ${images.length} image${images.length > 1 ? "s" : ""}`
+                : "Translate"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
-import { AIProvider } from "@/types";
+import { AIProvider, BilingualSuggestion, PersonContext } from "@/types";
 import { getModelById } from "./providers";
-import { buildTranslatePrompt, buildImageTranslatePrompt } from "../prompts/translate";
+import {
+  buildTranslatePrompt,
+  buildImageTranslatePrompt,
+} from "../prompts/translate";
 
 interface TranslateParams {
   provider: AIProvider;
@@ -8,6 +11,7 @@ interface TranslateParams {
   modelId: string;
   text: string;
   detectTone: boolean;
+  personContext?: PersonContext;
 }
 
 interface TranslateImageParams {
@@ -16,12 +20,40 @@ interface TranslateImageParams {
   modelId: string;
   imageBase64: string | string[];
   detectTone: boolean;
+  personContext?: PersonContext;
+}
+
+// Normalize suggestions to BilingualSuggestion[] for backward compat
+function normalizeSuggestions(
+  raw: unknown
+): BilingualSuggestion[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw.map((item) => {
+    if (typeof item === "string") {
+      return { english: "", farsi: item };
+    }
+    if (item && typeof item === "object") {
+      return {
+        english: (item as Record<string, string>).english || "",
+        farsi: (item as Record<string, string>).farsi || "",
+      };
+    }
+    return { english: "", farsi: String(item) };
+  });
 }
 
 function parseAIResponse(raw: string) {
   try {
     const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+
+    if (parsed.suggestedResponses) {
+      parsed.suggestedResponses = normalizeSuggestions(
+        parsed.suggestedResponses
+      );
+    }
+
+    return parsed;
   } catch {
     return { translation: raw.trim() };
   }
@@ -31,7 +63,10 @@ async function callOpenAI(
   apiKey: string,
   model: string,
   systemPrompt: string,
-  messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>
+  messages: Array<{
+    role: string;
+    content: string | Array<Record<string, unknown>>;
+  }>
 ): Promise<string> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -54,7 +89,10 @@ async function callAnthropic(
   apiKey: string,
   model: string,
   systemPrompt: string,
-  messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>
+  messages: Array<{
+    role: string;
+    content: string | Array<Record<string, unknown>>;
+  }>
 ): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -99,45 +137,13 @@ async function callGoogle(
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-async function callGoogleWithImage(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  imageBase64: string
-): Promise<string> {
-  const match = imageBase64.match(/^data:(.+?);base64,(.+)$/);
-  if (!match) throw new Error("Invalid image format");
-  const mimeType = match[1];
-  const data64 = match[2];
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [
-          {
-            parts: [
-              { inline_data: { mime_type: mimeType, data: data64 } },
-              { text: "Translate this image" },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0.3 },
-      }),
-    }
-  );
-  const respData = await res.json();
-  if (respData.error) throw new Error(respData.error.message);
-  return respData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-}
-
 export async function translateDirect(params: TranslateParams) {
   const model = getModelById(params.modelId);
   const actualModelId = model?.modelId || params.modelId;
-  const systemPrompt = buildTranslatePrompt(params.detectTone);
+  const systemPrompt = buildTranslatePrompt(
+    params.detectTone,
+    params.personContext
+  );
 
   let raw: string;
 
@@ -153,7 +159,12 @@ export async function translateDirect(params: TranslateParams) {
       ]);
       break;
     case "google":
-      raw = await callGoogle(params.apiKey, actualModelId, systemPrompt, params.text);
+      raw = await callGoogle(
+        params.apiKey,
+        actualModelId,
+        systemPrompt,
+        params.text
+      );
       break;
     default:
       throw new Error(`Unsupported provider: ${params.provider}`);
@@ -165,7 +176,10 @@ export async function translateDirect(params: TranslateParams) {
 export async function translateImageDirect(params: TranslateImageParams) {
   const model = getModelById(params.modelId);
   const actualModelId = model?.modelId || params.modelId;
-  const systemPrompt = buildImageTranslatePrompt(params.detectTone);
+  const systemPrompt = buildImageTranslatePrompt(
+    params.detectTone,
+    params.personContext
+  );
 
   const images = Array.isArray(params.imageBase64)
     ? params.imageBase64
@@ -197,7 +211,11 @@ export async function translateImageDirect(params: TranslateImageParams) {
           role: "user",
           content: parsed.map((p) => ({
             type: "image",
-            source: { type: "base64", media_type: p.mediaType, data: p.data },
+            source: {
+              type: "base64",
+              media_type: p.mediaType,
+              data: p.data,
+            },
           })),
         },
       ]);
