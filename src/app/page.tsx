@@ -62,13 +62,13 @@ export default function Home() {
   );
 
   const handleImageUpload = useCallback(
-    async (base64: string) => {
+    async (base64List: string[]) => {
       setLoading(true);
       setError("");
       setTranslation("");
       setTone(null);
       setSuggestions([]);
-      setOriginalText("[Image]");
+      setOriginalText(`[${base64List.length} Image${base64List.length > 1 ? "s" : ""}]`);
 
       const { provider, model, apiKey } = getActiveProvider();
 
@@ -83,7 +83,7 @@ export default function Home() {
           provider,
           apiKey,
           modelId: model,
-          imageBase64: base64,
+          imageBase64: base64List,
           detectTone: settings.autoDetectTone,
         });
 
@@ -112,7 +112,7 @@ export default function Home() {
       provider,
       model,
       timestamp: Date.now(),
-      source: originalText === "[Image]" ? "image" : "text",
+      source: originalText.startsWith("[") && originalText.endsWith("]") && originalText.includes("Image") ? "image" : "text",
       starred: false,
     });
   };

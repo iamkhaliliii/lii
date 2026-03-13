@@ -14,7 +14,7 @@ interface TranslateImageParams {
   provider: AIProvider;
   apiKey: string;
   modelId: string;
-  imageBase64: string;
+  imageBase64: string | string[];
   detectTone: boolean;
 }
 
@@ -167,10 +167,15 @@ export async function translateImageDirect(params: TranslateImageParams) {
   const actualModelId = model?.modelId || params.modelId;
   const systemPrompt = buildImageTranslatePrompt(params.detectTone);
 
-  const match = params.imageBase64.match(/^data:(.+?);base64,(.+)$/);
-  if (!match) throw new Error("Invalid image format");
-  const mediaType = match[1];
-  const data64 = match[2];
+  const images = Array.isArray(params.imageBase64)
+    ? params.imageBase64
+    : [params.imageBase64];
+
+  const parsed = images.map((img) => {
+    const match = img.match(/^data:(.+?);base64,(.+)$/);
+    if (!match) throw new Error("Invalid image format");
+    return { mediaType: match[1], data: match[2], url: img };
+  });
 
   let raw: string;
 
@@ -179,9 +184,10 @@ export async function translateImageDirect(params: TranslateImageParams) {
       raw = await callOpenAI(params.apiKey, actualModelId, systemPrompt, [
         {
           role: "user",
-          content: [
-            { type: "image_url", image_url: { url: params.imageBase64 } },
-          ],
+          content: parsed.map((p) => ({
+            type: "image_url",
+            image_url: { url: p.url },
+          })),
         },
       ]);
       break;
@@ -189,23 +195,37 @@ export async function translateImageDirect(params: TranslateImageParams) {
       raw = await callAnthropic(params.apiKey, actualModelId, systemPrompt, [
         {
           role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: data64 },
-            },
-          ],
+          content: parsed.map((p) => ({
+            type: "image",
+            source: { type: "base64", media_type: p.mediaType, data: p.data },
+          })),
         },
       ]);
       break;
-    case "google":
-      raw = await callGoogleWithImage(
-        params.apiKey,
-        actualModelId,
-        systemPrompt,
-        params.imageBase64
+    case "google": {
+      const parts = [
+        ...parsed.map((p) => ({
+          inline_data: { mime_type: p.mediaType, data: p.data },
+        })),
+        { text: "Translate these images" },
+      ];
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${actualModelId}:generateContent?key=${params.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ parts }],
+            generationConfig: { temperature: 0.3 },
+          }),
+        }
       );
+      const respData = await res.json();
+      if (respData.error) throw new Error(respData.error.message);
+      raw = respData.candidates?.[0]?.content?.parts?.[0]?.text || "";
       break;
+    }
     default:
       throw new Error(`Unsupported provider: ${params.provider}`);
   }
