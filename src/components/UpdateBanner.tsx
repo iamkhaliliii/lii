@@ -10,14 +10,13 @@ export default function UpdateBanner() {
   const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkForAppUpdates().then(setUpdate);
   }, []);
 
   if (!update || dismissed) return null;
-
-  const [error, setError] = useState<string | null>(null);
 
   const handleInstall = async () => {
     setInstalling(true);

@@ -7,8 +7,6 @@ import {
   getSlackMessages,
   getSlackUsers,
   getSlackThreadReplies,
-  getSlackCustomEmojis,
-  clearCustomEmojiCache,
   refreshPinnedTimestamps,
   sendSlackMessage as sendSlackMsg,
   resolveSlackMentions,
@@ -31,7 +29,6 @@ export function useSlack() {
 
   const usersRef = useRef<Map<string, SlackUser>>(new Map());
   const fetchingRef = useRef(false);
-  const [customEmojis, setCustomEmojis] = useState<Map<string, string>>(new Map());
 
   const togglePin = useCallback((channelId: string) => {
     const current = settings.slack?.pinnedChannels || [];
@@ -56,12 +53,6 @@ export function useSlack() {
         usersRef.current = map;
       }
       const userMap = usersRef.current;
-
-      // Load custom workspace emojis
-      if (customEmojis.size === 0) {
-        const emojis = await getSlackCustomEmojis(token);
-        setCustomEmojis(emojis);
-      }
 
       let convs = await getSlackConversations(token);
 
@@ -214,8 +205,6 @@ export function useSlack() {
     setMessages([]);
     setThreadReplies({});
     setActiveChannelId(null);
-    setCustomEmojis(new Map());
-    clearCustomEmojiCache();
   }, [token]);
 
   return {
@@ -236,6 +225,5 @@ export function useSlack() {
     resolveUserName,
     togglePin,
     loadThreadReplies,
-    customEmojis,
   };
 }

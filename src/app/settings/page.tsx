@@ -13,10 +13,199 @@ import {
   Loader2,
   LogOut,
   Hash,
+  Plus,
+  Trash2,
+  BookOpen,
+  Pencil,
 } from "lucide-react";
+import { TranslationRule } from "@/types";
 import { translateDirect } from "@/lib/ai/client-direct";
 import { testSlackConnection } from "@/lib/slack";
 import { useToast } from "@/components/Toast";
+
+// ─── Translation Rules Section ───────────────────────────────
+
+function RulesSection({
+  rules,
+  onUpdate,
+}: {
+  rules: TranslationRule[];
+  onUpdate: (rules: TranslationRule[]) => void;
+}) {
+  const [newRule, setNewRule] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const addRule = () => {
+    const text = newRule.trim();
+    if (!text) return;
+    const rule: TranslationRule = {
+      id: Date.now().toString(),
+      text,
+      enabled: true,
+      createdAt: Date.now(),
+    };
+    onUpdate([...rules, rule]);
+    setNewRule("");
+  };
+
+  const removeRule = (id: string) => {
+    onUpdate(rules.filter((r) => r.id !== id));
+  };
+
+  const toggleRule = (id: string) => {
+    onUpdate(rules.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
+  };
+
+  const startEdit = (rule: TranslationRule) => {
+    setEditingId(rule.id);
+    setEditText(rule.text);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editText.trim()) return;
+    onUpdate(rules.map((r) => (r.id === editingId ? { ...r, text: editText.trim() } : r)));
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  return (
+    <>
+      <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+        Translation Rules
+      </p>
+      <div className="mb-8 rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+          <BookOpen size={16} className="text-muted" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Custom Rules</p>
+            <p className="text-xs text-muted">
+              Rules applied to every translation — names, terms, styles, etc.
+            </p>
+          </div>
+          {rules.length > 0 && (
+            <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-muted/60">
+              {rules.filter((r) => r.enabled).length} active
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-0 divide-y divide-border-subtle">
+          {/* Existing rules */}
+          {rules.map((rule) => (
+            <div
+              key={rule.id}
+              className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                !rule.enabled ? "opacity-50" : ""
+              }`}
+            >
+              <button
+                onClick={() => toggleRule(rule.id)}
+                className={`mt-0.5 toggle-switch ${rule.enabled ? "active" : ""}`}
+                role="switch"
+                aria-checked={rule.enabled}
+                style={{ transform: "scale(0.75)", transformOrigin: "top left" }}
+              />
+              <div className="min-w-0 flex-1">
+                {editingId === rule.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveEdit}
+                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-hover"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-muted hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                    {rule.text}
+                  </p>
+                )}
+              </div>
+              {editingId !== rule.id && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => startEdit(rule)}
+                    className="rounded-md p-1.5 text-muted/40 hover:bg-accent hover:text-foreground transition-colors"
+                    title="Edit rule"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
+                    onClick={() => removeRule(rule.id)}
+                    className="rounded-md p-1.5 text-muted/40 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
+                    title="Delete rule"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add new rule */}
+          <div className="px-4 py-3">
+            <div className="flex gap-2">
+              <textarea
+                value={newRule}
+                onChange={(e) => setNewRule(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    addRule();
+                  }
+                }}
+                placeholder="Add a rule, e.g.: When translating messages from Ami, keep 'salam ami aziz' as-is in the English translation..."
+                rows={2}
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder-muted/40 focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10 resize-none"
+              />
+              <button
+                onClick={addRule}
+                disabled={!newRule.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            {rules.length === 0 && (
+              <div className="mt-3 rounded-lg bg-accent/50 p-3">
+                <p className="text-xs text-muted/60 leading-relaxed">
+                  <strong>Examples:</strong>
+                </p>
+                <ul className="mt-1.5 space-y-1 text-xs text-muted/50">
+                  <li>• When the message is from Ami, keep &quot;salam ami aziz&quot; as-is in translation</li>
+                  <li>• Always spell the name &quot;Hyck&quot; as &quot;Hayk&quot; in translations</li>
+                  <li>• Use informal/friendly tone when translating messages from friends</li>
+                  <li>• Keep all brand names (Google, Apple, etc.) in English</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function SettingsPage() {
   const { settings, updateSettings } = useSettings();
@@ -364,6 +553,12 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        {/* Translation Rules */}
+        <RulesSection
+          rules={settings.rules || []}
+          onUpdate={(rules) => updateSettings({ rules })}
+        />
 
         {/* Account */}
         {user && (

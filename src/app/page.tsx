@@ -1,591 +1,745 @@
 "use client";
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Navbar from "@/components/Navbar";
-import ConversationSidebar from "@/components/ConversationSidebar";
-import ChatMessageBubble from "@/components/ChatMessageBubble";
-import ChatInput from "@/components/ChatInput";
-import ContactSelector from "@/components/ContactSelector";
-import ContactDetectionBanner from "@/components/ContactDetectionBanner";
-import TranslationSkeleton from "@/components/TranslationSkeleton";
-import { MessageCircle, Sparkles, ChevronDown, ImagePlus } from "lucide-react";
-import { useSettings } from "@/hooks/useSettings";
-import { useConversations } from "@/hooks/useConversations";
-import { useChatMessages } from "@/hooks/useChatMessages";
-import { useContacts } from "@/hooks/useContacts";
-import { PersonContext } from "@/types";
-import { saveContactMessage } from "@/lib/storage";
-import { generateId } from "@/lib/utils";
 import {
-  detectContactFromText,
-  matchContactByName,
-  type DetectionResult,
-} from "@/lib/contact-detection";
+  Languages,
+  Sparkles,
+  ImagePlus,
+  X,
+  Send,
+  Loader2,
+  ArrowUpRight,
+  Copy,
+  Check,
+  Gauge,
+  Smile,
+  User,
+  MessageCircleReply,
+} from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
+import { translateDirect, translateImageDirect, polishReplyDirect } from "@/lib/ai/client-direct";
+import { getModelById } from "@/lib/ai/providers";
+import { BilingualSuggestion, ToneAnalysis } from "@/types";
+import { useToast } from "@/components/Toast";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
-  const { settings } = useSettings();
-  const {
-    contacts,
-    selectedContactId,
-    select: selectContact,
-    create: createContact,
-    getPersonContext,
-  } = useContacts();
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-  const {
-    conversations,
-    activeId,
-    activeConversation,
-    create: createConversation,
-    select: selectConversation,
-    remove: removeConversation,
-    refreshConversation,
-    updateConversation,
-    load: loadConversations,
-  } = useConversations();
+// ─── Translation result type ────────────────────────────────
 
-  const {
-    messages,
-    loading: messagesLoading,
-    sending,
-    loadMessages,
-    clearMessages,
-    sendIncoming,
-    sendIncomingImage,
-    sendOutgoing,
-    lastIncomingText,
-  } = useChatMessages();
+interface TranslationResult {
+  id: string;
+  originalText: string;
+  translatedText: string;
+  direction?: "en2fa" | "fa2en";
+  tone?: ToneAnalysis;
+  suggestedResponses?: BilingualSuggestion[];
+  needsResponse?: boolean;
+  source: "text" | "image";
+  images?: string[];
+  timestamp: number;
+}
 
-  const [error, setError] = useState("");
-  const [prefill, setPrefill] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
+// ─── Copy button ────────────────────────────────────────────
 
-  // Detection state
-  const [detectionResult, setDetectionResult] = useState<{
-    parsed: { detectedName: string | null; cleanedText: string; format: string };
-    match: DetectionResult;
-  } | null>(null);
-  const [detectionConfirmed, setDetectionConfirmed] = useState(false);
-
-  // Load messages when active conversation changes
-  useEffect(() => {
-    if (activeId) {
-      loadMessages(activeId);
-      // Also set contact from conversation
-      if (activeConversation?.contactId) {
-        selectContact(activeConversation.contactId);
-      }
-    } else {
-      clearMessages();
-    }
-  }, [activeId, activeConversation?.contactId, loadMessages, clearMessages, selectContact]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
-
-  // Track scroll position for scroll-to-bottom button
-  const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    setShowScrollBottom(distFromBottom > 150);
-  }, []);
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  // Build person context
-  const buildContext = useCallback(
-    async (): Promise<PersonContext | undefined> => {
-      if (!selectedContactId) return undefined;
-      const ctx = await getPersonContext(selectedContactId);
-      return ctx || undefined;
-    },
-    [selectedContactId, getPersonContext]
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-muted/50 transition-colors hover:bg-accent hover:text-foreground"
+      title="Copy"
+    >
+      {copied ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+      {copied ? "Copied" : "Copy"}
+    </button>
   );
+}
 
-  // Check for Slack translate request (from /slack page)
-  const slackTranslateProcessed = useRef(false);
+// ─── Tone badge ─────────────────────────────────────────────
+
+function ToneBadge({ tone }: { tone: ToneAnalysis }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+      <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-muted/70">
+        <Gauge size={9} /> {tone.formality}
+      </span>
+      <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-muted/70">
+        <Smile size={9} /> {tone.sentiment}
+      </span>
+      {tone.likelySender && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-muted/70">
+          <User size={9} /> {tone.likelySender}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Result card ────────────────────────────────────────────
+
+function ResultCard({
+  result,
+  onReply,
+  onUseSuggestion,
+}: {
+  result: TranslationResult;
+  onReply: (text: string) => void;
+  onUseSuggestion: (text: string) => void;
+}) {
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [customReply, setCustomReply] = useState("");
+  const customReplyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize custom reply textarea
   useEffect(() => {
-    if (slackTranslateProcessed.current) return;
+    const ta = customReplyRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${Math.min(ta.scrollHeight, 80)}px`;
+    }
+  }, [customReply]);
+
+  const isFa2En = result.direction === "fa2en";
+  const originalLabel = isFa2En ? "فارسی / Finglish" : "English";
+  const translationLabel = isFa2En ? "English" : "فارسی";
+  const originalDir = isFa2En ? "rtl" : "ltr";
+  const translationDir = isFa2En ? "ltr" : "rtl";
+
+  return (
+    <div className="animate-slide-up rounded-2xl border border-border bg-card p-5 shadow-xs">
+      {/* Direction indicator */}
+      {result.direction && (
+        <div className="mb-3 flex items-center gap-1.5">
+          <span className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium",
+            isFa2En ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary"
+          )}>
+            {isFa2En ? "🇮🇷 → 🇬🇧 Farsi to English" : "🇬🇧 → 🇮🇷 English to Farsi"}
+          </span>
+        </div>
+      )}
+
+      {/* Original */}
+      <div className="mb-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted/40">
+            {originalLabel}
+          </span>
+          <CopyButton text={result.originalText} />
+        </div>
+        {result.images && result.images.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {result.images.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                alt={`Image ${i + 1}`}
+                className="h-16 w-16 rounded-lg border border-border object-cover"
+              />
+            ))}
+          </div>
+        )}
+        <p dir={originalDir} className="text-[13px] leading-relaxed text-foreground/70 whitespace-pre-wrap">
+          {result.originalText}
+        </p>
+      </div>
+
+      {/* Divider */}
+      <div className="my-3 h-px bg-border-subtle" />
+
+      {/* Translation */}
+      <div className="mb-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-primary/60">
+            {translationLabel}
+          </span>
+          <CopyButton text={result.translatedText} />
+        </div>
+        <p dir={translationDir} className="text-[15px] font-medium leading-relaxed text-foreground whitespace-pre-wrap">
+          {result.translatedText}
+        </p>
+      </div>
+
+      {/* Tone */}
+      {result.tone && (
+        <div className="mb-3">
+          <ToneBadge tone={result.tone} />
+          {result.tone.context && (
+            <p className="mt-1.5 text-[11px] text-muted/50 leading-relaxed">
+              {result.tone.context}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Suggestions + Custom reply */}
+      <div className="mt-3">
+        {result.suggestedResponses && result.suggestedResponses.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowSuggestions(!showSuggestions)}
+              className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted/40 hover:text-muted/60 transition-colors"
+            >
+              <MessageCircleReply size={10} />
+              Suggested Replies ({result.suggestedResponses.length})
+            </button>
+            {showSuggestions && (
+              <div className="space-y-1.5 mb-3">
+                {result.suggestedResponses.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => onUseSuggestion(s.english || s.farsi)}
+                    className="group block w-full rounded-lg border border-border-subtle bg-accent/30 px-3 py-2 text-left transition-colors hover:border-primary/20 hover:bg-primary-muted"
+                  >
+                    {s.english && (
+                      <p className="text-[12px] text-foreground/70 group-hover:text-foreground transition-colors">
+                        {s.english}
+                      </p>
+                    )}
+                    {s.farsi && (
+                      <p dir="rtl" className="text-[11px] text-muted/50 mt-0.5">
+                        {s.farsi}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Custom reply input — always shown */}
+        <div className="flex items-end gap-2">
+          <div className={cn(
+            "flex-1 overflow-hidden rounded-lg border bg-accent/20 transition-all focus-within:ring-1 focus-within:ring-primary/10",
+            customReply ? "border-primary/30" : "border-border-subtle"
+          )}>
+            <textarea
+              ref={customReplyRef}
+              value={customReply}
+              onChange={(e) => setCustomReply(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && customReply.trim()) {
+                  e.preventDefault();
+                  onUseSuggestion(customReply.trim());
+                  setCustomReply("");
+                }
+              }}
+              placeholder="Write your own reply (Farsi, Finglish, or English)…"
+              dir="auto"
+              rows={1}
+              className="w-full resize-none border-0 bg-transparent px-3 py-2 text-[12px] leading-relaxed placeholder-muted/40 focus:outline-none"
+              style={{ maxHeight: 80 }}
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (customReply.trim()) {
+                onUseSuggestion(customReply.trim());
+                setCustomReply("");
+              }
+            }}
+            disabled={!customReply.trim()}
+            className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+            title="Polish reply (↵)"
+          >
+            <ArrowUpRight size={13} />
+          </button>
+        </div>
+        <p className="mt-1 text-[9px] text-muted/30">
+          Type in any language — it will be polished into professional English + Farsi
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Polish result card ─────────────────────────────────────
+
+function PolishResultCard({ polished, farsi }: { polished: string; farsi: string }) {
+  return (
+    <div className="animate-slide-up rounded-2xl border border-primary/20 bg-primary-muted/30 p-5 shadow-xs">
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <ArrowUpRight size={12} className="text-primary/60" />
+        <span className="text-[10px] font-medium uppercase tracking-wider text-primary/60">
+          Polished Reply
+        </span>
+      </div>
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-muted/40">English</span>
+          <CopyButton text={polished} />
+        </div>
+        <p className="text-[14px] leading-relaxed text-foreground whitespace-pre-wrap">{polished}</p>
+      </div>
+      {farsi && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-muted/40">Farsi</span>
+            <CopyButton text={farsi} />
+          </div>
+          <p dir="rtl" className="text-[13px] leading-relaxed text-foreground/80 whitespace-pre-wrap">{farsi}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main page ──────────────────────────────────────────────
+
+export default function TranslatePage() {
+  const { settings } = useSettings();
+  const toast = useToast();
+
+  const [text, setText] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [isReplyMode, setIsReplyMode] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [results, setResults] = useState<TranslationResult[]>([]);
+  const [polishResults, setPolishResults] = useState<{ polished: string; farsi: string }[]>([]);
+  const [lastOriginalText, setLastOriginalText] = useState("");
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultsEndRef = useRef<HTMLDivElement>(null);
+  const dragCountRef = useRef(0);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${Math.min(ta.scrollHeight, 150)}px`;
+    }
+  }, [text]);
+
+  // Scroll to latest result
+  useEffect(() => {
+    resultsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [results, polishResults]);
+
+  // Drag & drop
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCountRef.current++;
+      if (e.dataTransfer?.types.includes("Files")) setDragging(true);
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCountRef.current--;
+      if (dragCountRef.current === 0) setDragging(false);
+    };
+    const handleDragOver = (e: DragEvent) => e.preventDefault();
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      dragCountRef.current = 0;
+      setDragging(false);
+      const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
+        f.type.startsWith("image/")
+      );
+      if (files.length === 0) return;
+      const base64List = await Promise.all(files.map(readFileAsBase64));
+      setImages((prev) => [...prev, ...base64List]);
+    };
+    document.addEventListener("dragenter", handleDragEnter);
+    document.addEventListener("dragleave", handleDragLeave);
+    document.addEventListener("dragover", handleDragOver);
+    document.addEventListener("drop", handleDrop);
+    return () => {
+      document.removeEventListener("dragenter", handleDragEnter);
+      document.removeEventListener("dragleave", handleDragLeave);
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
+  // Paste handler
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      const base64List = await Promise.all(imageFiles.map(readFileAsBase64));
+      setImages((prev) => [...prev, ...base64List]);
+    }
+  }, []);
+
+  // Check for Slack translate request
+  useEffect(() => {
     const raw = sessionStorage.getItem("lii-slack-translate");
     if (!raw) return;
-    slackTranslateProcessed.current = true;
     sessionStorage.removeItem("lii-slack-translate");
     try {
       const data = JSON.parse(raw);
       if (data.text) {
-        // Create a new conversation and auto-send the text
-        (async () => {
-          const conv = await createConversation(undefined, data.senderName || data.text.slice(0, 40));
-          // Small delay to let state settle
-          setTimeout(() => {
-            handleSendText(data.text);
-          }, 100);
-        })();
+        setText(data.text);
+        setTimeout(() => handleTranslate(data.text), 100);
       }
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle new chat creation
-  const handleNewChat = useCallback(async () => {
-    selectContact(null);
-    setDetectionResult(null);
-    setDetectionConfirmed(false);
+  const getProviderConfig = useCallback(() => {
+    const provider = settings.activeProvider;
+    const apiKey = settings.providers[provider]?.apiKey;
+    const modelId = settings.activeModel;
+    if (!apiKey) throw new Error("No API key configured. Go to Settings.");
+    return { provider, apiKey, modelId };
+  }, [settings]);
+
+  // Translate text
+  const handleTranslate = useCallback(async (inputText?: string) => {
+    const t = inputText || text.trim();
+    if (!t && images.length === 0) return;
     setError("");
-    await createConversation();
-  }, [createConversation, selectContact]);
+    setTranslating(true);
 
-  // Handle sending text
-  const handleSendText = useCallback(
-    async (text: string) => {
-      setError("");
+    try {
+      const { provider, apiKey, modelId } = getProviderConfig();
 
-      // If no active conversation, create one
-      let convId = activeId;
-      if (!convId) {
-        const conv = await createConversation(
-          selectedContactId || undefined,
-          text.slice(0, 40)
-        );
-        convId = conv.id;
-      }
-
-      // Contact detection
-      let actualText = text;
-      if (!selectedContactId) {
-        const result = detectContactFromText(text, contacts);
-        if (result.match.type === "exact") {
-          selectContact(result.match.contact.id);
-          actualText = result.parsed.cleanedText || text;
-        } else if (result.match.type === "fuzzy" || result.match.type === "new") {
-          setDetectionResult(result);
-          setDetectionConfirmed(false);
-        }
-      }
-
-      try {
-        const personContext = await buildContext();
-        const msg = await sendIncoming(convId, actualText, {
+      let parsed;
+      if (images.length > 0) {
+        parsed = await translateImageDirect({
+          provider, apiKey, modelId,
+          imageBase64: images,
           detectTone: settings.autoDetectTone,
-          personContext,
-          contactId: selectedContactId || undefined,
+          rules: settings.rules,
         });
-
-        // LLM sender fallback
-        if (!selectedContactId && msg.tone?.detectedSender) {
-          const llmMatch = matchContactByName(msg.tone.detectedSender, contacts);
-          if (llmMatch.type === "exact") {
-            selectContact(llmMatch.contact.id);
-          } else if (llmMatch.type === "fuzzy" || llmMatch.type === "new") {
-            setDetectionResult({
-              parsed: {
-                detectedName: msg.tone.detectedSender,
-                cleanedText: actualText,
-                format: "generic",
-              },
-              match: llmMatch,
-            });
-            setDetectionConfirmed(false);
-          }
-        }
-
-        // Auto-title: update conversation title from first message
-        if (activeConversation?.title === "New Chat" || !activeId) {
-          const autoTitle = actualText.slice(0, 50) + (actualText.length > 50 ? "…" : "");
-          const conv = conversations.find((c) => c.id === convId);
-          if (conv && conv.title === "New Chat") {
-            await updateConversation({ ...conv, title: autoTitle, updatedAt: Date.now() });
-          }
-        }
-
-        // Save to contact history
-        if (selectedContactId) {
-          await saveContactMessage({
-            id: generateId(),
-            contactId: selectedContactId,
-            direction: "from_them",
-            originalText: actualText,
-            translatedText: msg.translatedText,
-            tone: msg.tone || undefined,
-            timestamp: Date.now(),
-          });
-        }
-
-        await refreshConversation(convId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Translation failed");
-      }
-    },
-    [
-      activeId,
-      activeConversation,
-      conversations,
-      selectedContactId,
-      contacts,
-      settings.autoDetectTone,
-      buildContext,
-      createConversation,
-      sendIncoming,
-      selectContact,
-      refreshConversation,
-      updateConversation,
-    ]
-  );
-
-  // Handle sending images
-  const handleSendImage = useCallback(
-    async (base64List: string[]) => {
-      setError("");
-
-      let convId = activeId;
-      if (!convId) {
-        const conv = await createConversation(selectedContactId || undefined);
-        convId = conv.id;
-      }
-
-      try {
-        const personContext = await buildContext();
-        await sendIncomingImage(convId, base64List, {
+      } else {
+        parsed = await translateDirect({
+          provider, apiKey, modelId,
+          text: t,
           detectTone: settings.autoDetectTone,
-          personContext,
-          contactId: selectedContactId || undefined,
+          rules: settings.rules,
         });
-        await refreshConversation(convId);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Image translation failed"
-        );
       }
-    },
-    [
-      activeId,
-      selectedContactId,
-      settings.autoDetectTone,
-      buildContext,
-      createConversation,
-      sendIncomingImage,
-      refreshConversation,
-    ]
-  );
 
-  // Handle sending reply (polish mode)
-  const handleSendReply = useCallback(
-    async (draft: string) => {
-      if (!activeId) return;
-      setError("");
+      const result: TranslationResult = {
+        id: Date.now().toString(),
+        originalText: parsed.originalText || parsed.extractedText || t,
+        translatedText: parsed.translation || "",
+        direction: parsed.direction || undefined,
+        tone: parsed.tone,
+        suggestedResponses: parsed.suggestedResponses,
+        needsResponse: parsed.needsResponse,
+        source: images.length > 0 ? "image" : "text",
+        images: images.length > 0 ? [...images] : undefined,
+        timestamp: Date.now(),
+      };
 
-      try {
-        const msg = await sendOutgoing(
-          activeId,
-          draft,
-          lastIncomingText,
-          { contactId: selectedContactId || undefined }
-        );
+      setResults((prev) => [...prev, result]);
+      setLastOriginalText(t);
+      setText("");
+      setImages([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Translation failed");
+    } finally {
+      setTranslating(false);
+    }
+  }, [text, images, settings, getProviderConfig]);
 
-        // Save to contact history
-        if (selectedContactId && msg) {
-          await saveContactMessage({
-            id: generateId(),
-            contactId: selectedContactId,
-            direction: "to_them",
-            originalText: msg.polishedReply || draft,
-            translatedText: msg.translatedText,
-            timestamp: Date.now(),
-          });
-        }
+  // Polish reply
+  const handlePolish = useCallback(async () => {
+    const t = text.trim();
+    if (!t) return;
+    setError("");
+    setTranslating(true);
 
-        await refreshConversation(activeId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to polish reply");
-      }
-    },
-    [activeId, lastIncomingText, selectedContactId, sendOutgoing, refreshConversation]
-  );
+    try {
+      const { provider, apiKey, modelId } = getProviderConfig();
+      const result = await polishReplyDirect({
+        provider, apiKey, modelId,
+        draft: t,
+        originalMessage: lastOriginalText,
+        rules: settings.rules,
+      });
 
-  // Handle suggestion use
-  const handleUseSuggestion = useCallback((text: string) => {
-    setPrefill(text);
+      setPolishResults((prev) => [...prev, result]);
+      setText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to polish reply");
+    } finally {
+      setTranslating(false);
+    }
+  }, [text, lastOriginalText, getProviderConfig]);
+
+  const handleSend = useCallback(() => {
+    if (translating) return;
+    if (isReplyMode) {
+      handlePolish();
+    } else {
+      handleTranslate();
+    }
+  }, [translating, isReplyMode, handlePolish, handleTranslate]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleUseSuggestion = useCallback((s: string) => {
+    setText(s);
+    setIsReplyMode(true);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   }, []);
 
-  // Handle text change for contact detection
-  const handleTextChange = useCallback(
-    (text: string) => {
-      if (selectedContactId) {
-        setDetectionResult(null);
-        return;
-      }
-      const result = detectContactFromText(text, contacts);
-      if (result.match.type === "none") {
-        setDetectionResult(null);
-      } else {
-        setDetectionResult(result);
-        setDetectionConfirmed(false);
-        if (result.match.type === "exact") {
-          selectContact(result.match.contact.id);
-          setDetectionConfirmed(true);
-        }
-      }
-    },
-    [contacts, selectedContactId, selectContact]
-  );
-
-  // Detection banner handlers
-  const handleConfirmFuzzy = useCallback(() => {
-    if (detectionResult?.match.type === "fuzzy") {
-      selectContact(detectionResult.match.contact.id);
-      setDetectionConfirmed(true);
-    }
-  }, [detectionResult, selectContact]);
-
-  const handleCreateNewFromDetection = useCallback(async () => {
-    if (detectionResult?.parsed.detectedName) {
-      const contact = await createContact(
-        detectionResult.parsed.detectedName,
-        "colleague"
-      );
-      selectContact(contact.id);
-      setDetectionConfirmed(true);
-      setDetectionResult(null);
-    }
-  }, [detectionResult, createContact, selectContact]);
-
-  const handleDismissDetection = useCallback(() => {
-    setDetectionResult(null);
+  const handleClear = useCallback(() => {
+    setResults([]);
+    setPolishResults([]);
+    setLastOriginalText("");
+    setText("");
+    setImages([]);
+    setError("");
   }, []);
 
-  const showDetectionBanner =
-    detectionResult &&
-    detectionResult.match.type !== "none" &&
-    !detectionConfirmed;
-
-  // Group messages with date separators
-  const messagesWithDates = useMemo(() => {
-    const items: Array<{ type: "date"; label: string } | { type: "message"; id: string }> = [];
-    let lastDate = "";
-    for (const msg of messages) {
-      const d = new Date(msg.timestamp);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      let dateLabel: string;
-      if (d.toDateString() === today.toDateString()) {
-        dateLabel = "Today";
-      } else if (d.toDateString() === yesterday.toDateString()) {
-        dateLabel = "Yesterday";
-      } else {
-        dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
-      }
-      if (dateLabel !== lastDate) {
-        items.push({ type: "date", label: dateLabel });
-        lastDate = dateLabel;
-      }
-      items.push({ type: "message", id: msg.id });
-    }
-    return items;
-  }, [messages]);
+  const hasContent = text.trim() || images.length > 0;
+  const hasResults = results.length > 0 || polishResults.length > 0;
 
   return (
     <div className="flex h-full flex-col bg-background">
       <Navbar />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <ConversationSidebar
-          conversations={conversations}
-          activeId={activeId}
-          contacts={contacts}
-          onSelect={selectConversation}
-          onCreate={handleNewChat}
-          onDelete={removeConversation}
-          onSearch={(q) => loadConversations(q || undefined)}
-        />
-
-        {/* Chat pane */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {activeConversation ? (
-            <>
-              {/* Chat header */}
-              <div className="flex items-center gap-3 border-b border-border-subtle bg-card/50 px-4 py-2 backdrop-blur-sm">
-                <div className="flex-1 min-w-0">
-                  <ContactSelector
-                    contacts={contacts}
-                    selectedContactId={selectedContactId}
-                    onSelect={selectContact}
-                    onCreate={createContact}
-                  />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Results area */}
+        <main className="flex-1 overflow-y-auto chat-scroll">
+          <div className="mx-auto max-w-2xl px-4 py-5">
+            {/* Empty state */}
+            {!hasResults && !translating && (
+              <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover">
+                  <Languages size={28} className="text-primary/50" />
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {messages.length > 0 && (
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-muted/50">
-                      {messages.length} message{messages.length !== 1 ? "s" : ""}
-                    </span>
-                  )}
+                <h2 className="text-lg font-semibold text-foreground/80 mb-1.5">Translate</h2>
+                <p className="max-w-[280px] text-sm text-muted/50 leading-relaxed">
+                  Paste text or screenshots in any language — English↔Farsi translation, tone analysis, and reply suggestions
+                </p>
+                <div className="mt-5 flex items-center gap-3 text-[10px] text-muted/30">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">⌘V</kbd>
+                    paste text
+                  </span>
+                  <span className="h-3 w-px bg-border-subtle" />
+                  <span className="flex items-center gap-1">
+                    <ImagePlus size={10} />
+                    drop image
+                  </span>
                 </div>
               </div>
+            )}
 
-              {/* Detection banner */}
-              {showDetectionBanner && (
-                <div className="px-4 py-2 border-b border-border-subtle">
-                  <ContactDetectionBanner
-                    match={detectionResult.match}
-                    detectedName={detectionResult.parsed.detectedName!}
-                    onConfirmExact={() => setDetectionConfirmed(true)}
-                    onConfirmFuzzy={handleConfirmFuzzy}
-                    onCreateNew={handleCreateNewFromDetection}
-                    onDismiss={handleDismissDetection}
-                  />
+            {/* Error */}
+            {error && (
+              <div className="mb-4 animate-slide-up rounded-xl bg-danger-light p-3 text-sm text-danger">
+                {error}
+              </div>
+            )}
+
+            {/* Results */}
+            <div className="space-y-4">
+              {results.map((r) => (
+                <ResultCard
+                  key={r.id}
+                  result={r}
+                  onReply={handleUseSuggestion}
+                  onUseSuggestion={handleUseSuggestion}
+                />
+              ))}
+              {polishResults.map((r, i) => (
+                <PolishResultCard key={`polish-${i}`} polished={r.polished} farsi={r.farsi} />
+              ))}
+            </div>
+
+            {/* Translating indicator */}
+            {translating && (
+              <div className="mt-4 flex justify-center">
+                <div className="animate-slide-up flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 shadow-xs">
+                  <Loader2 size={14} className="animate-spin text-primary" />
+                  <span className="text-[12px] text-muted/60">
+                    {isReplyMode ? "Polishing reply…" : "Translating…"}
+                  </span>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Messages */}
-              <main
-                ref={scrollContainerRef}
-                onScroll={handleScroll}
-                className="relative flex-1 overflow-y-auto bg-background chat-scroll"
-              >
-                <div className="mx-auto max-w-3xl space-y-4 px-4 py-5">
-                  {/* Error */}
-                  {error && (
-                    <div className="animate-slide-up rounded-xl bg-danger-light p-3 text-sm text-danger">
-                      {error}
-                    </div>
-                  )}
+            <div ref={resultsEndRef} />
+          </div>
+        </main>
 
-                  {/* Message list */}
-                  {messagesLoading ? (
-                    <div className="space-y-3">
-                      <TranslationSkeleton />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="animate-fade-in flex flex-col items-center justify-center py-16 text-center">
-                      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover">
-                        <Sparkles size={26} className="text-muted/40" />
-                      </div>
-                      <p className="text-sm font-medium text-muted/60">
-                        Paste a message or screenshot
-                      </p>
-                      <p className="mt-1.5 max-w-[260px] text-xs leading-relaxed text-muted/40">
-                        Translate, analyze tone, and get smart reply suggestions — all in one go
-                      </p>
-                      <div className="mt-5 flex items-center gap-3 text-[10px] text-muted/30">
-                        <span className="flex items-center gap-1">
-                          <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">⌘V</kbd>
-                          paste text
-                        </span>
-                        <span className="h-3 w-px bg-border-subtle" />
-                        <span className="flex items-center gap-1">
-                          <ImagePlus size={10} />
-                          drop image
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    messagesWithDates.map((item, idx) => {
-                      if (item.type === "date") {
-                        return (
-                          <div key={`date-${item.label}`} className="flex items-center gap-3 py-2">
-                            <div className="h-px flex-1 bg-border-subtle" />
-                            <span className="shrink-0 rounded-full bg-accent px-3 py-0.5 text-[10px] font-medium text-muted/60">
-                              {item.label}
-                            </span>
-                            <div className="h-px flex-1 bg-border-subtle" />
-                          </div>
-                        );
-                      }
-                      const msg = messages.find((m) => m.id === item.id);
-                      if (!msg) return null;
-                      return (
-                        <ChatMessageBubble
-                          key={msg.id}
-                          message={msg}
-                          onUseSuggestion={handleUseSuggestion}
-                          animationDelay={idx * 30}
-                        />
-                      );
-                    })
-                  )}
-
-                  {/* Typing/sending indicator */}
-                  {sending && (
-                    <div className="animate-bubble-in flex justify-start">
-                      <div className="rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-3 shadow-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="typing-dot" />
-                          <span className="typing-dot" />
-                          <span className="typing-dot" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Scroll to bottom button */}
-                {showScrollBottom && (
-                  <button
-                    onClick={scrollToBottom}
-                    className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 animate-fade-in rounded-full border border-border bg-card p-2 shadow-md transition-all hover:bg-surface-hover hover:shadow-lg active:scale-95"
-                    title="Scroll to bottom"
-                  >
-                    <ChevronDown size={16} className="text-muted" />
-                  </button>
-                )}
-              </main>
-
-              {/* Input */}
-              <ChatInput
-                onSendText={handleSendText}
-                onSendReply={handleSendReply}
-                onSendImage={handleSendImage}
-                onTextChange={handleTextChange}
-                sending={sending}
-                prefill={prefill}
-                onPrefillUsed={() => setPrefill("")}
-              />
-            </>
-          ) : (
-            /* Empty state — no active conversation */
-            <div className="flex flex-1 flex-col items-center justify-center text-center px-6">
-              <div className="animate-fade-in flex flex-col items-center">
-                <div className="relative mb-6 inline-block">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-accent to-surface-hover">
-                    <MessageCircle size={32} className="text-primary/60" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary shadow-sm">
-                    <Sparkles size={14} className="text-white" />
-                  </div>
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-foreground">
-                  lii
-                </h3>
-                <p className="mb-2 max-w-[280px] text-sm text-muted">
-                  English → Farsi translator with tone analysis, smart reply suggestions, and conversation history.
-                </p>
-                <div className="mb-8 flex items-center justify-center gap-4 text-[11px] text-muted/50">
-                  <span>Translate</span>
-                  <span className="h-3 w-px bg-border" />
-                  <span>Analyze tone</span>
-                  <span className="h-3 w-px bg-border" />
-                  <span>Reply</span>
-                </div>
-                <button
-                  onClick={handleNewChat}
-                  className="group flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md active:scale-[0.98]"
-                >
-                  <MessageCircle size={16} className="transition-transform group-hover:scale-110" />
-                  New Chat
-                </button>
+        {/* Input area */}
+        <div className="border-t border-border-subtle bg-background px-4 py-3">
+          {/* Drop overlay */}
+          {dragging && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+              <div className="animate-scale-in rounded-xl border-2 border-dashed border-primary bg-card px-12 py-10 text-center shadow-lg">
+                <ImagePlus size={40} className="mx-auto mb-3 text-primary" />
+                <p className="text-base font-medium">Drop images here</p>
+                <p className="text-xs text-muted">PNG, JPG, WebP</p>
               </div>
             </div>
           )}
+
+          <div className="mx-auto max-w-2xl">
+            {/* Image previews */}
+            {images.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="group relative">
+                    <img
+                      src={img}
+                      alt={`Image ${i + 1}`}
+                      className="h-12 w-12 rounded-lg border border-border object-cover"
+                    />
+                    <button
+                      onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <X size={8} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reply mode indicator */}
+            {isReplyMode && (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full bg-primary-muted px-2.5 py-1 text-[11px] font-medium text-primary">
+                  <ArrowUpRight size={11} />
+                  Composing reply
+                </span>
+                <button
+                  onClick={() => setIsReplyMode(false)}
+                  className="text-[11px] text-muted hover:text-foreground transition-colors"
+                >
+                  Switch to translate
+                </button>
+              </div>
+            )}
+
+            {/* Input row */}
+            <div className="flex items-end gap-2">
+              <div className="mb-1 flex shrink-0 flex-col gap-1">
+                <button
+                  onClick={() => setIsReplyMode(!isReplyMode)}
+                  className={cn(
+                    "shrink-0 rounded-lg p-2 transition-colors",
+                    isReplyMode
+                      ? "bg-primary-muted text-primary"
+                      : "text-muted hover:bg-accent hover:text-foreground"
+                  )}
+                  title={isReplyMode ? "Switch to translate" : "Switch to reply"}
+                >
+                  {isReplyMode ? <ArrowUpRight size={16} /> : <Languages size={16} />}
+                </button>
+              </div>
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="mb-1 shrink-0 rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground transition-colors"
+                title="Upload image"
+              >
+                <ImagePlus size={16} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    const base64List = await Promise.all(files.map(readFileAsBase64));
+                    setImages((prev) => [...prev, ...base64List]);
+                  }
+                  e.target.value = "";
+                }}
+                className="hidden"
+              />
+
+              <div className={cn(
+                "flex-1 overflow-hidden rounded-xl border bg-card transition-all focus-within:ring-1 focus-within:ring-primary/10",
+                isReplyMode
+                  ? "border-primary/30 focus-within:border-primary/50"
+                  : "border-border focus-within:border-primary/40"
+              )}>
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isReplyMode ? "Write your reply… (Farsi, Finglish, or English)" : "Paste text in any language or drop a screenshot…"}
+                  dir="auto"
+                  rows={1}
+                  className="w-full resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-relaxed placeholder-muted focus:outline-none"
+                  style={{ maxHeight: 150 }}
+                />
+              </div>
+
+              <button
+                onClick={handleSend}
+                disabled={!hasContent || translating}
+                className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+                title={`${isReplyMode ? "Polish reply" : "Translate"} (⌘↵)`}
+              >
+                {translating ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : isReplyMode ? (
+                  <ArrowUpRight size={16} />
+                ) : (
+                  <Send size={16} />
+                )}
+              </button>
+            </div>
+
+            {/* Bottom bar */}
+            <div className="mt-1.5 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted/40">
+                <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">↵</kbd>
+                <span>{isReplyMode ? "polish" : "translate"}</span>
+                <span className="text-muted/20">·</span>
+                <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">⇧↵</kbd>
+                <span>new line</span>
+              </div>
+              {hasResults && (
+                <button
+                  onClick={handleClear}
+                  className="text-[10px] text-muted/40 hover:text-muted/70 transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

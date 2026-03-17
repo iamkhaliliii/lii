@@ -1,4 +1,4 @@
-import { SlackConversation, SlackMessage, SlackUser, SlackFile, SlackReaction, SlackAttachment } from "@/types";
+import { SlackConversation, SlackMessage, SlackUser } from "@/types";
 import { isTauri } from "./auth";
 
 const BASE = "https://slack.com/api";
@@ -83,16 +83,10 @@ export async function testSlackConnection(
   token: string
 ): Promise<{ ok: boolean; user?: string; team?: string; error?: string }> {
   try {
-    console.log("[Slack] Testing connection...");
-    const httpFetch = await getHttpFetch();
-    console.log("[Slack] Using fetch:", httpFetch === globalThis.fetch ? "browser" : "tauri-plugin");
     const data = await slackFetch("auth.test", token);
-    console.log("[Slack] auth.test OK:", data.user, data.team);
     return { ok: true, user: data.user as string, team: data.team as string };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Slack] testConnection failed:", msg, err);
-    return { ok: false, error: msg };
+    return { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
   }
 }
 
@@ -188,65 +182,6 @@ export async function refreshPinnedTimestamps(
   return conversations;
 }
 
-// ─── Parse files, reactions, attachments ─────────────────────
-
-function parseFiles(raw: unknown): SlackFile[] | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  return raw.map((f: Record<string, unknown>) => ({
-    id: (f.id as string) || "",
-    name: (f.name as string) || "",
-    mimetype: (f.mimetype as string) || "",
-    filetype: (f.filetype as string) || "",
-    url: (f.url_private as string) || (f.permalink as string) || "",
-    thumb360: (f.thumb_360 as string) || undefined,
-    thumb480: (f.thumb_480 as string) || undefined,
-    thumbVideo: (f.thumb_video as string) || undefined,
-    width: (f.original_w as number) || undefined,
-    height: (f.original_h as number) || undefined,
-    size: (f.size as number) || undefined,
-  }));
-}
-
-function parseReactions(raw: unknown): SlackReaction[] | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  return raw.map((r: Record<string, unknown>) => ({
-    name: (r.name as string) || "",
-    count: (r.count as number) || 0,
-    users: (r.users as string[]) || [],
-  }));
-}
-
-function parseAttachments(raw: unknown): SlackAttachment[] | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  return raw.map((a: Record<string, unknown>) => ({
-    title: (a.title as string) || undefined,
-    titleLink: (a.title_link as string) || undefined,
-    text: (a.text as string) || undefined,
-    pretext: (a.pretext as string) || undefined,
-    imageUrl: (a.image_url as string) || undefined,
-    thumbUrl: (a.thumb_url as string) || undefined,
-    fromUrl: (a.from_url as string) || undefined,
-    serviceName: (a.service_name as string) || undefined,
-    serviceIcon: (a.service_icon as string) || undefined,
-    color: (a.color as string) || undefined,
-  }));
-}
-
-function parseMessage(m: Record<string, unknown>): SlackMessage {
-  return {
-    ts: m.ts as string,
-    userId: (m.user as string) || "",
-    text: (m.text as string) || "",
-    timestamp: parseFloat(m.ts as string) * 1000,
-    threadTs: m.thread_ts as string | undefined,
-    isThread: !!(m.thread_ts && m.thread_ts !== m.ts),
-    replyCount: (m.reply_count as number) || 0,
-    files: parseFiles(m.files),
-    reactions: parseReactions(m.reactions),
-    attachments: parseAttachments(m.attachments),
-  };
-}
-
 // ─── Get messages ────────────────────────────────────────────
 
 export async function getSlackMessages(
@@ -263,7 +198,15 @@ export async function getSlackMessages(
 
   return messages
     .filter((m) => m.type === "message")
-    .map(parseMessage)
+    .map((m) => ({
+      ts: m.ts as string,
+      userId: (m.user as string) || "",
+      text: (m.text as string) || "",
+      timestamp: parseFloat(m.ts as string) * 1000,
+      threadTs: m.thread_ts as string | undefined,
+      isThread: !!(m.thread_ts && m.thread_ts !== m.ts),
+      replyCount: (m.reply_count as number) || 0,
+    }))
     .reverse();
 }
 
@@ -284,7 +227,15 @@ export async function getSlackThreadReplies(
 
   return messages
     .filter((m) => m.type === "message")
-    .map((m) => ({ ...parseMessage(m), isThread: true, replyCount: 0 }));
+    .map((m) => ({
+      ts: m.ts as string,
+      userId: (m.user as string) || "",
+      text: (m.text as string) || "",
+      timestamp: parseFloat(m.ts as string) * 1000,
+      threadTs: m.thread_ts as string | undefined,
+      isThread: true,
+      replyCount: 0,
+    }));
 }
 
 // ─── Users ───────────────────────────────────────────────────
@@ -341,28 +292,6 @@ export async function sendSlackMessage(
     text,
     ...(threadTs ? { thread_ts: threadTs } : {}),
   });
-}
-
-// ─── Custom emoji ───────────────────────────────────────────
-
-let customEmojiCache: Map<string, string> | null = null;
-
-export async function getSlackCustomEmojis(
-  token: string
-): Promise<Map<string, string>> {
-  if (customEmojiCache) return customEmojiCache;
-  try {
-    const data = await slackFetch("emoji.list", token);
-    const emoji = (data.emoji as Record<string, string>) || {};
-    customEmojiCache = new Map(Object.entries(emoji));
-    return customEmojiCache;
-  } catch {
-    return new Map();
-  }
-}
-
-export function clearCustomEmojiCache(): void {
-  customEmojiCache = null;
 }
 
 // ─── Resolve user mentions in text ───────────────────────────

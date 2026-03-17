@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { useSlack } from "@/hooks/useSlack";
 import { useSettings } from "@/hooks/useSettings";
 import { translateDirect, polishReplyDirect } from "@/lib/ai/client-direct";
-import { SlackConversation, SlackMessage, SlackFile, SlackAttachment } from "@/types";
+import { SlackConversation, SlackMessage } from "@/types";
 import {
   Hash,
   MessageCircle,
@@ -25,11 +25,6 @@ import {
   Copy,
   Check,
   Sparkles,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  ExternalLink,
-  Link as LinkIcon,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
@@ -106,438 +101,6 @@ function AvatarStack({ urls, size = 28 }: { urls: string[]; size?: number }) {
   );
 }
 
-// ─── Rich text: parse links and format ──────────────────────
-
-function RichText({ text, customEmojis }: { text: string; customEmojis?: Map<string, string> }) {
-  // Parse Slack mrkdwn: <url>, <url|label>, :emoji:, *bold*, _italic_, ~strike~, `code`
-  const parts: React.ReactNode[] = [];
-  // Combined regex for slack links, raw URLs, and emoji shortcodes
-  const pattern = /(<(https?:\/\/[^|>]+)(?:\|([^>]+))?>)|(https?:\/\/[^\s<>)\]]+)|(:([a-zA-Z0-9_+\-]+)(?:::skin-tone-\d)?:)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    // Add text before this match
-    if (match.index > lastIndex) {
-      parts.push(formatInline(text.slice(lastIndex, match.index), parts.length));
-    }
-
-    if (match[5]) {
-      // Emoji shortcode :name:
-      const emojiName = match[6];
-      const fullMatch = match[5]; // includes skin tone if present
-      const resolved = resolveEmoji(emojiName, customEmojis);
-      if (resolved.type === "unicode") {
-        parts.push(<span key={`em-${parts.length}`} className="text-[15px]" title={fullMatch}>{resolved.value}</span>);
-      } else if (resolved.type === "image") {
-        parts.push(<img key={`em-${parts.length}`} src={resolved.url} alt={fullMatch} title={fullMatch} className="inline-block h-5 w-5 align-text-bottom" />);
-      } else {
-        // Unknown emoji, show as text
-        parts.push(fullMatch);
-      }
-    } else {
-      // URL
-      const url = match[2] || match[4];
-      const label = match[3] || cleanUrl(url);
-
-      parts.push(
-        <a
-          key={`link-${parts.length}`}
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-primary/80 hover:text-primary hover:underline transition-colors break-all"
-        >
-          <LinkIcon size={10} className="shrink-0 opacity-50" />
-          <span>{label}</span>
-        </a>
-      );
-    }
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(formatInline(text.slice(lastIndex), parts.length));
-  }
-
-  return <>{parts}</>;
-}
-
-function cleanUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, "");
-    const path = u.pathname === "/" ? "" : u.pathname;
-    const display = host + path;
-    return display.length > 60 ? display.slice(0, 57) + "…" : display;
-  } catch {
-    return url.length > 60 ? url.slice(0, 57) + "…" : url;
-  }
-}
-
-function formatInline(text: string, keyBase: number): React.ReactNode {
-  // Simple inline formatting: *bold*, _italic_, ~strike~, `code`
-  const parts: React.ReactNode[] = [];
-  const inlinePattern = /(\*[^*\n]+\*)|(_[^_\n]+_)|(~[^~\n]+~)|(`[^`\n]+`)/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-
-  while ((m = inlinePattern.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    const raw = m[0];
-    const inner = raw.slice(1, -1);
-    if (raw.startsWith("*")) parts.push(<strong key={`b-${keyBase}-${m.index}`}>{inner}</strong>);
-    else if (raw.startsWith("_")) parts.push(<em key={`i-${keyBase}-${m.index}`}>{inner}</em>);
-    else if (raw.startsWith("~")) parts.push(<s key={`s-${keyBase}-${m.index}`} className="opacity-60">{inner}</s>);
-    else if (raw.startsWith("`")) parts.push(<code key={`c-${keyBase}-${m.index}`} className="rounded bg-accent px-1 py-0.5 text-[11px] font-mono">{inner}</code>);
-    last = m.index + raw.length;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
-}
-
-// ─── File attachment rendering ──────────────────────────────
-
-function FilePreview({ file }: { file: SlackFile }) {
-  const isImage = file.mimetype?.startsWith("image/");
-  const isVideo = file.mimetype?.startsWith("video/");
-  const dims = file.width && file.height ? `${file.width}×${file.height}` : null;
-
-  if (isImage) {
-    return (
-      <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
-        <div className="relative overflow-hidden rounded-lg border border-border-subtle bg-accent/20 max-w-[320px]">
-          {/* Styled image placeholder — Slack images require auth so we show a rich preview */}
-          <div className="flex flex-col items-center justify-center gap-2 px-4 py-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/8">
-              <ImageIcon size={22} className="text-primary/50" />
-            </div>
-            <div className="text-center">
-              <p className="text-[12px] font-medium text-foreground/80 line-clamp-1">{file.name}</p>
-              <p className="text-[10px] text-muted/50 mt-0.5">
-                {[dims, file.size ? formatFileSize(file.size) : null].filter(Boolean).join(" · ") || "Image"}
-              </p>
-            </div>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-opacity bg-black/5">
-            <span className="flex items-center gap-1 rounded-full bg-foreground/80 px-3 py-1 text-[10px] font-medium text-background">
-              <ExternalLink size={10} />
-              Open in Slack
-            </span>
-          </div>
-        </div>
-      </a>
-    );
-  }
-
-  if (isVideo) {
-    return (
-      <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
-        <div className="relative overflow-hidden rounded-lg border border-border-subtle bg-accent/20 max-w-[320px]">
-          <div className="flex flex-col items-center justify-center gap-2 px-4 py-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/8">
-              <Film size={22} className="text-purple-500/50" />
-            </div>
-            <div className="text-center">
-              <p className="text-[12px] font-medium text-foreground/80 line-clamp-1">{file.name}</p>
-              <p className="text-[10px] text-muted/50 mt-0.5">
-                {[dims, file.size ? formatFileSize(file.size) : null].filter(Boolean).join(" · ") || "Video"}
-              </p>
-            </div>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-opacity bg-black/5">
-            <span className="flex items-center gap-1 rounded-full bg-foreground/80 px-3 py-1 text-[10px] font-medium text-background">
-              <Film size={10} />
-              Play in Slack
-            </span>
-          </div>
-        </div>
-      </a>
-    );
-  }
-
-  // Generic file
-  return (
-    <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
-      <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-accent/20 px-3 py-2.5 max-w-[320px] transition-colors hover:bg-accent/40">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/8 shrink-0">
-          <FileText size={18} className="text-muted/50" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
-          <p className="text-[10px] text-muted/50">
-            {file.filetype.toUpperCase()}{file.size ? ` · ${formatFileSize(file.size)}` : ""}
-          </p>
-        </div>
-        <ExternalLink size={12} className="shrink-0 text-muted/30 group-hover/file:text-primary transition-colors" />
-      </div>
-    </a>
-  );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-// ─── Link unfurl / attachment card ──────────────────────────
-
-function AttachmentCard({ att }: { att: SlackAttachment }) {
-  const hasImage = !!(att.imageUrl || att.thumbUrl);
-  return (
-    <div
-      className="mt-1.5 overflow-hidden rounded-lg border border-border-subtle max-w-[400px]"
-      style={att.color ? { borderLeftWidth: 3, borderLeftColor: `#${att.color}` } : undefined}
-    >
-      {att.imageUrl && (
-        <a href={att.titleLink || att.fromUrl || att.imageUrl} target="_blank" rel="noopener noreferrer">
-          <img
-            src={att.imageUrl}
-            alt={att.title || ""}
-            className="w-full object-cover"
-            style={{ maxHeight: 200 }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        </a>
-      )}
-      <div className="px-3 py-2">
-        {att.serviceName && (
-          <div className="flex items-center gap-1.5 mb-1">
-            {att.serviceIcon && <img src={att.serviceIcon} alt="" className="h-3.5 w-3.5 rounded" />}
-            <span className="text-[10px] font-medium text-muted/50">{att.serviceName}</span>
-          </div>
-        )}
-        {att.title && (
-          <a
-            href={att.titleLink || att.fromUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-[12px] font-semibold text-primary/80 hover:text-primary hover:underline leading-snug"
-          >
-            {att.title}
-          </a>
-        )}
-        {att.text && (
-          <p className="mt-1 text-[11px] leading-relaxed text-foreground/70 line-clamp-3">{att.text}</p>
-        )}
-        {!att.imageUrl && att.thumbUrl && (
-          <img src={att.thumbUrl} alt="" className="mt-1.5 rounded max-h-[80px] object-cover" />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Emoji resolver (node-emoji + Slack aliases + custom) ───
-
-import { get as getEmoji } from "node-emoji";
-
-// Slack uses shortcodes without underscores and different names than node-emoji.
-// This map covers the most common Slack-specific names → node-emoji names.
-const SLACK_TO_STANDARD: Record<string, string> = {
-  // Slack merges words, node-emoji uses underscores
-  slightlysmilingface: "slightly_smiling_face",
-  slightlyfrrowningface: "slightly_frowning_face",
-  upsidedownface: "upside_down_face",
-  thinkingface: "thinking_face",
-  rollingeyes: "roll_eyes",
-  zippermouthface: "zipper_mouth_face",
-  moneymoothface: "money_mouth_face",
-  nerdface: "nerd_face",
-  facewithtearsofjoy: "joy",
-  facewithrollingeyes: "roll_eyes",
-  // Common Slack names → node-emoji equivalents
-  thumbsup: "+1",
-  thumbsdown: "-1",
-  thumbs_up: "+1",
-  thumbs_down: "-1",
-  hankey: "poop",
-  shit: "poop",
-  "simple_smile": "slightly_smiling_face",
-  squirrel: "chipmunk",
-  shipit: "chipmunk",
-  // Hearts
-  heavyheart: "heart",
-  yellowheart: "yellow_heart",
-  greenheart: "green_heart",
-  blueheart: "blue_heart",
-  purpleheart: "purple_heart",
-  blackheart: "black_heart",
-  brokenheart: "broken_heart",
-  sparkling_heart: "sparkling_heart",
-  heartpulse: "heartpulse",
-  // Hands & gestures
-  raisedhand: "hand",
-  raisedhandswitchfingerssplayed: "raised_hand_with_fingers_splayed",
-  "ok_hand": "ok_hand",
-  callmefhand: "call_me_hand",
-  raisedbackofhand: "raised_back_of_hand",
-  fistbump: "fist_oncoming",
-  leftfacingfist: "fist_left",
-  rightfacingfist: "fist_right",
-  clappinghands: "clap",
-  openhandss: "open_hands",
-  palmsuptogether: "palms_up_together",
-  wavinghand: "wave",
-  iloveyouhandgesture: "love_you_gesture",
-  // Faces
-  grinningface: "grinning",
-  grinningfacewithbigeyes: "smiley",
-  grinningfacewithsweat: "sweat_smile",
-  beamingfacewithsmilingeyes: "grin",
-  grinningfacewithsquintingeyes: "laughing",
-  sweatsmile: "sweat_smile",
-  facewithtearsof_joy: "joy",
-  rollingonthefloorlaughing: "rofl",
-  winkingface: "wink",
-  smilingfacewithsmilingeyes: "blush",
-  faceblowingakiss: "kissing_heart",
-  smilingfacewithhearts: "smiling_face_with_three_hearts",
-  starsstruck: "star_struck",
-  facesavoringfood: "yum",
-  smilingfacewithsunglasses: "sunglasses",
-  partyingface: "partying_face",
-  smilingfacewithhalo: "innocent",
-  cowboyhatface: "cowboy_hat_face",
-  clownface: "clown_face",
-  lyingface: "lying_face",
-  shushingface: "shushing_face",
-  facewithhanndovermouthh: "hand_over_mouth",
-  facewithmonocle: "monocle_face",
-  confusedface: "confused",
-  worriedface: "worried",
-  slightlyfrrowningface2: "slightly_frowning_face",
-  facewithopenmmouth: "open_mouth",
-  hushedface: "hushed",
-  astonishedface: "astonished",
-  flushedface: "flushed",
-  pleadingface: "pleading_face",
-  cryingface: "cry",
-  loudlycryingface: "sob",
-  facescreamingiinfear: "scream",
-  hotface: "hot_face",
-  coldface: "cold_face",
-  wearyface: "weary",
-  tiredface: "tired_face",
-  yawningface: "yawning_face",
-  facewithlookoftriumph: "triumph",
-  angryface: "angry",
-  // Objects & symbols
-  partypopper: "tada",
-  confettiball: "confetti_ball",
-  redcircle: "red_circle",
-  largecircle: "large_blue_circle",
-  whitecheckmark: "white_check_mark",
-  heavycheckmark: "heavy_check_mark",
-  heavypluissign: "heavy_plus_sign",
-  heavyminussign: "heavy_minus_sign",
-  heavymultiplicationsign: "heavy_multiplication_x",
-  speechballoon: "speech_balloon",
-  thoughtballoon: "thought_balloon",
-  // Slack-only shortcodes that map to standard emoji
-  thanks: "pray",
-  thank_you: "pray",
-  "e-mail": "email",
-  memo: "memo",
-};
-
-type EmojiResult =
-  | { type: "unicode"; value: string }
-  | { type: "image"; url: string }
-  | { type: "text"; value: string };
-
-function resolveEmoji(
-  name: string,
-  customEmojis?: Map<string, string>
-): EmojiResult {
-  // Strip skin tone suffixes for lookup, e.g. "+1::skin-tone-2"
-  const baseName = name.replace(/::skin-tone-\d/, "");
-
-  // 1. Check custom workspace emojis first
-  if (customEmojis?.has(name)) {
-    const url = customEmojis.get(name)!;
-    if (url.startsWith("alias:")) {
-      return resolveEmoji(url.slice(6), customEmojis);
-    }
-    return { type: "image", url };
-  }
-  if (customEmojis?.has(baseName)) {
-    const url = customEmojis.get(baseName)!;
-    if (url.startsWith("alias:")) {
-      return resolveEmoji(url.slice(6), customEmojis);
-    }
-    return { type: "image", url };
-  }
-
-  // 2. Try node-emoji directly
-  const direct = getEmoji(name) || getEmoji(baseName);
-  if (direct) return { type: "unicode", value: direct };
-
-  // 3. Try Slack alias → node-emoji
-  const mapped = SLACK_TO_STANDARD[name] || SLACK_TO_STANDARD[baseName];
-  if (mapped) {
-    const emoji = getEmoji(mapped);
-    if (emoji) return { type: "unicode", value: emoji };
-  }
-
-  // 4. Try converting Slack's no-underscore format to underscored
-  // e.g. "slightlysmilingface" won't match but if we can't find it
-  // in the alias map, try adding underscores before common suffixes
-  const withUnderscores = name
-    .replace(/face$/, "_face")
-    .replace(/hand$/, "_hand")
-    .replace(/heart$/, "_heart")
-    .replace(/eyes$/, "_eyes")
-    .replace(/mark$/, "_mark")
-    .replace(/sign$/, "_sign");
-  if (withUnderscores !== name) {
-    const emoji = getEmoji(withUnderscores);
-    if (emoji) return { type: "unicode", value: emoji };
-  }
-
-  // 5. Fallback — show as text
-  return { type: "text", value: `:${name}:` };
-}
-
-// ─── Reactions row (Slack-standard) ─────────────────────────
-
-function ReactionsRow({
-  reactions,
-  customEmojis,
-}: {
-  reactions: { name: string; count: number }[];
-  customEmojis?: Map<string, string>;
-}) {
-  return (
-    <div className="mt-1.5 flex flex-wrap gap-1">
-      {reactions.map((r) => {
-        const resolved = resolveEmoji(r.name, customEmojis);
-        return (
-          <span
-            key={r.name}
-            className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-accent/40 px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent hover:border-primary/20 cursor-default"
-            title={`:${r.name}:`}
-          >
-            {resolved.type === "image" ? (
-              <img
-                src={resolved.url}
-                alt={`:${r.name}:`}
-                className="h-4 w-4 object-contain"
-              />
-            ) : (
-              <span className="text-[15px] leading-none">
-                {resolved.type === "unicode" ? resolved.value : resolved.value}
-              </span>
-            )}
-            <span className="font-medium text-foreground/60 tabular-nums">{r.count}</span>
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function SlackPage() {
   const router = useRouter();
   const { settings } = useSettings();
@@ -557,7 +120,6 @@ export default function SlackPage() {
     resolveUserName,
     togglePin,
     loadThreadReplies,
-    customEmojis,
   } = useSlack();
   const toast = useToast();
 
@@ -1042,38 +604,15 @@ export default function SlackPage() {
                                   </span>
                                 </div>
                               )}
-                              <div
+                              <p
                                 dir="auto"
                                 className={cn(
                                   "text-[13px] leading-relaxed text-foreground/85 whitespace-pre-wrap break-words",
                                   !grouped && "mt-0.5"
                                 )}
                               >
-                                <RichText text={msg.text} customEmojis={customEmojis} />
-                              </div>
-
-                              {/* Files */}
-                              {msg.files && msg.files.length > 0 && (
-                                <div className="space-y-1">
-                                  {msg.files.map((f) => (
-                                    <FilePreview key={f.id} file={f} />
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Attachments / link unfurls */}
-                              {msg.attachments && msg.attachments.length > 0 && (
-                                <div className="space-y-1">
-                                  {msg.attachments.map((att, ai) => (
-                                    <AttachmentCard key={ai} att={att} />
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Reactions */}
-                              {msg.reactions && msg.reactions.length > 0 && (
-                                <ReactionsRow reactions={msg.reactions} customEmojis={customEmojis} />
-                              )}
+                                {msg.text}
+                              </p>
 
                               {/* Thread button */}
                               {(msg.replyCount ?? 0) > 0 && !msg.isThread && activeChannelId && (
@@ -1272,32 +811,9 @@ export default function SlackPage() {
                                         {getMsgTime(reply.timestamp)}
                                       </span>
                                     </div>
-                                    <div dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
-                                      <RichText text={reply.text} customEmojis={customEmojis} />
-                                    </div>
-
-                                    {/* Reply files */}
-                                    {reply.files && reply.files.length > 0 && (
-                                      <div className="space-y-1">
-                                        {reply.files.map((f) => (
-                                          <FilePreview key={f.id} file={f} />
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {/* Reply attachments */}
-                                    {reply.attachments && reply.attachments.length > 0 && (
-                                      <div className="space-y-1">
-                                        {reply.attachments.map((att, ai) => (
-                                          <AttachmentCard key={ai} att={att} />
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {/* Reply reactions */}
-                                    {reply.reactions && reply.reactions.length > 0 && (
-                                      <ReactionsRow reactions={reply.reactions} customEmojis={customEmojis} />
-                                    )}
+                                    <p dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
+                                      {reply.text}
+                                    </p>
 
                                     {/* Reply translation */}
                                     {translatingTs === reply.ts && (
