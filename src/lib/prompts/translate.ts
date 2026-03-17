@@ -86,9 +86,9 @@ IMPORTANT for direction:
 - "fa2en" if you translated Farsi/Finglish → English
 
 IMPORTANT for needsResponse:
-- true if the message asks a question, requests action, or expects a reply
-- false for announcements, FYI, status updates, automated notifications, or purely informational messages
-- When in doubt, set to true`
+- If direction is "fa2en" (user wrote Farsi/Finglish → English), ALWAYS set to false — user is composing, not receiving
+- If direction is "en2fa": true if it asks a question or expects a reply; false for announcements/FYI
+- When in doubt for en2fa, set to true`
     );
   }
 
@@ -123,9 +123,9 @@ IMPORTANT for direction:
 - "fa2en" if you translated Farsi/Finglish → English
 
 IMPORTANT for needsResponse:
-- true if the message asks a question, requests action, or expects a reply
-- false for announcements, FYI, status updates, automated notifications
-- When in doubt, set to true
+- If direction is "fa2en" (user wrote Farsi/Finglish → English), ALWAYS set needsResponse to false — the user is composing their own message, not receiving one
+- If direction is "en2fa" (received English → Farsi): true if it asks a question, requests action, or expects a reply; false for announcements, FYI, status updates
+- When in doubt for en2fa, set to true
 
 IMPORTANT for detectedSender:
 - Look for the actual name of the person in the message (greetings, signatures, chat headers)
@@ -134,9 +134,8 @@ IMPORTANT for detectedSender:
 - This is the person's NAME, not their role (role goes in likelySender)
 
 IMPORTANT for suggestedResponses:
-- "english" is the actual English reply the user would send back to the sender
-- "farsi" is the Persian translation so the user understands what they are saying
-- Make English replies natural and appropriate for the context
+- If direction is "fa2en", ALWAYS return an empty array [] — the user is writing their own message, not receiving one
+- If direction is "en2fa": suggest English replies the user would send back, with Farsi translations
 - If needsResponse is false, return an empty array []`
   );
 }
