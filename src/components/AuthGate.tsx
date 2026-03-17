@@ -47,7 +47,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return (
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
         <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4">
-          <div className="text-center">
+          <div className="flex flex-col items-center text-center">
+            <img src="/app-icon.png" alt="lii" className="mb-3 h-16 w-16 rounded-xl" />
             <h1 className="mb-2 text-3xl font-bold text-primary">lii</h1>
             <p className="text-sm text-muted">
               AI-powered Translation Assistant

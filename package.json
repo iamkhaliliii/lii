@@ -1,6 +1,6 @@
 {
   "name": "lii",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -25,6 +25,7 @@
     "idb": "^8.0.0",
     "lucide-react": "^0.460.0",
     "next": "16.1.6",
+    "node-emoji": "^2.2.0",
     "openai": "^4.77.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

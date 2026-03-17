@@ -343,6 +343,28 @@ export async function sendSlackMessage(
   });
 }
 
+// ─── Custom emoji ───────────────────────────────────────────
+
+let customEmojiCache: Map<string, string> | null = null;
+
+export async function getSlackCustomEmojis(
+  token: string
+): Promise<Map<string, string>> {
+  if (customEmojiCache) return customEmojiCache;
+  try {
+    const data = await slackFetch("emoji.list", token);
+    const emoji = (data.emoji as Record<string, string>) || {};
+    customEmojiCache = new Map(Object.entries(emoji));
+    return customEmojiCache;
+  } catch {
+    return new Map();
+  }
+}
+
+export function clearCustomEmojiCache(): void {
+  customEmojiCache = null;
+}
+
 // ─── Resolve user mentions in text ───────────────────────────
 
 export function resolveSlackMentions(

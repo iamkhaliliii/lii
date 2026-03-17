@@ -108,11 +108,11 @@ function AvatarStack({ urls, size = 28 }: { urls: string[]; size?: number }) {
 
 // ─── Rich text: parse links and format ──────────────────────
 
-function RichText({ text }: { text: string }) {
-  // Parse Slack mrkdwn: <url>, <url|label>, *bold*, _italic_, ~strike~, `code`
+function RichText({ text, customEmojis }: { text: string; customEmojis?: Map<string, string> }) {
+  // Parse Slack mrkdwn: <url>, <url|label>, :emoji:, *bold*, _italic_, ~strike~, `code`
   const parts: React.ReactNode[] = [];
-  // Combined regex for slack links and raw URLs
-  const pattern = /(<(https?:\/\/[^|>]+)(?:\|([^>]+))?>)|(https?:\/\/[^\s<>)\]]+)/g;
+  // Combined regex for slack links, raw URLs, and emoji shortcodes
+  const pattern = /(<(https?:\/\/[^|>]+)(?:\|([^>]+))?>)|(https?:\/\/[^\s<>)\]]+)|(:([a-zA-Z0-9_+\-]+)(?:::skin-tone-\d)?:)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -122,21 +122,37 @@ function RichText({ text }: { text: string }) {
       parts.push(formatInline(text.slice(lastIndex, match.index), parts.length));
     }
 
-    const url = match[2] || match[4]; // slack link URL or raw URL
-    const label = match[3] || cleanUrl(url);
+    if (match[5]) {
+      // Emoji shortcode :name:
+      const emojiName = match[6];
+      const fullMatch = match[5]; // includes skin tone if present
+      const resolved = resolveEmoji(emojiName, customEmojis);
+      if (resolved.type === "unicode") {
+        parts.push(<span key={`em-${parts.length}`} className="text-[15px]" title={fullMatch}>{resolved.value}</span>);
+      } else if (resolved.type === "image") {
+        parts.push(<img key={`em-${parts.length}`} src={resolved.url} alt={fullMatch} title={fullMatch} className="inline-block h-5 w-5 align-text-bottom" />);
+      } else {
+        // Unknown emoji, show as text
+        parts.push(fullMatch);
+      }
+    } else {
+      // URL
+      const url = match[2] || match[4];
+      const label = match[3] || cleanUrl(url);
 
-    parts.push(
-      <a
-        key={`link-${parts.length}`}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-0.5 text-primary/80 hover:text-primary hover:underline transition-colors break-all"
-      >
-        <LinkIcon size={10} className="shrink-0 opacity-50" />
-        <span>{label}</span>
-      </a>
-    );
+      parts.push(
+        <a
+          key={`link-${parts.length}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-primary/80 hover:text-primary hover:underline transition-colors break-all"
+        >
+          <LinkIcon size={10} className="shrink-0 opacity-50" />
+          <span>{label}</span>
+        </a>
+      );
+    }
     lastIndex = match.index + match[0].length;
   }
 
@@ -182,113 +198,80 @@ function formatInline(text: string, keyBase: number): React.ReactNode {
 
 // ─── File attachment rendering ──────────────────────────────
 
-function FilePreview({ file, token }: { file: SlackFile; token: string }) {
+function FilePreview({ file }: { file: SlackFile }) {
   const isImage = file.mimetype?.startsWith("image/");
   const isVideo = file.mimetype?.startsWith("video/");
-  const thumb = file.thumb480 || file.thumb360 || file.thumbVideo;
+  const dims = file.width && file.height ? `${file.width}×${file.height}` : null;
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
-
-  if (isImage && thumb) {
+  if (isImage) {
     return (
       <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
-        <div className="relative overflow-hidden rounded-lg border border-border-subtle max-w-[320px]">
-          <img
-            src={thumb}
-            alt={file.name}
-            className="block w-full object-cover transition-transform group-hover/file:scale-[1.02]"
-            style={{ maxHeight: 240 }}
-            onError={(e) => {
-              // If direct load fails (auth required), show placeholder
-              (e.target as HTMLImageElement).style.display = "none";
-              (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-            }}
-          />
-          <div className="hidden items-center justify-center bg-accent/50 py-8">
-            <ImageIcon size={24} className="text-muted/40" />
+        <div className="relative overflow-hidden rounded-lg border border-border-subtle bg-accent/20 max-w-[320px]">
+          {/* Styled image placeholder — Slack images require auth so we show a rich preview */}
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/8">
+              <ImageIcon size={22} className="text-primary/50" />
+            </div>
+            <div className="text-center">
+              <p className="text-[12px] font-medium text-foreground/80 line-clamp-1">{file.name}</p>
+              <p className="text-[10px] text-muted/50 mt-0.5">
+                {[dims, file.size ? formatFileSize(file.size) : null].filter(Boolean).join(" · ") || "Image"}
+              </p>
+            </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-4 opacity-0 group-hover/file:opacity-100 transition-opacity">
-            <span className="text-[10px] text-white/90 font-medium">{file.name}</span>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-opacity bg-black/5">
+            <span className="flex items-center gap-1 rounded-full bg-foreground/80 px-3 py-1 text-[10px] font-medium text-background">
+              <ExternalLink size={10} />
+              Open in Slack
+            </span>
           </div>
         </div>
       </a>
-    );
-  }
-
-  if (isImage && !thumb) {
-    return (
-      <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5 max-w-[320px]">
-        <ImageIcon size={18} className="shrink-0 text-primary/50" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
-          {file.size && <p className="text-[10px] text-muted/50">{formatFileSize(file.size)}</p>}
-        </div>
-        <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
-          <ExternalLink size={12} />
-        </a>
-      </div>
     );
   }
 
   if (isVideo) {
     return (
-      <div className="mt-1.5 max-w-[320px]">
-        {file.thumbVideo || thumb ? (
-          <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block">
-            <div className="relative overflow-hidden rounded-lg border border-border-subtle">
-              <img
-                src={file.thumbVideo || thumb}
-                alt={file.name}
-                className="block w-full object-cover"
-                style={{ maxHeight: 200 }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-                }}
-              />
-              <div className="hidden items-center justify-center bg-accent/50 py-8">
-                <Film size={24} className="text-muted/40" />
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-transform group-hover/file:scale-110">
-                  <Film size={18} />
-                </div>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-4">
-                <span className="text-[10px] text-white/90 font-medium">{file.name}</span>
-              </div>
+      <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
+        <div className="relative overflow-hidden rounded-lg border border-border-subtle bg-accent/20 max-w-[320px]">
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/8">
+              <Film size={22} className="text-purple-500/50" />
             </div>
-          </a>
-        ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5">
-            <Film size={18} className="shrink-0 text-purple-500/60" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
-              {file.size && <p className="text-[10px] text-muted/50">{formatFileSize(file.size)}</p>}
+            <div className="text-center">
+              <p className="text-[12px] font-medium text-foreground/80 line-clamp-1">{file.name}</p>
+              <p className="text-[10px] text-muted/50 mt-0.5">
+                {[dims, file.size ? formatFileSize(file.size) : null].filter(Boolean).join(" · ") || "Video"}
+              </p>
             </div>
-            <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
-              <ExternalLink size={12} />
-            </a>
           </div>
-        )}
-      </div>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-opacity bg-black/5">
+            <span className="flex items-center gap-1 rounded-full bg-foreground/80 px-3 py-1 text-[10px] font-medium text-background">
+              <Film size={10} />
+              Play in Slack
+            </span>
+          </div>
+        </div>
+      </a>
     );
   }
 
   // Generic file
   return (
-    <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5 max-w-[320px]">
-      <FileText size={18} className="shrink-0 text-muted/50" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
-        <p className="text-[10px] text-muted/50">
-          {file.filetype.toUpperCase()}{file.size ? ` · ${formatFileSize(file.size)}` : ""}
-        </p>
+    <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
+      <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-accent/20 px-3 py-2.5 max-w-[320px] transition-colors hover:bg-accent/40">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/8 shrink-0">
+          <FileText size={18} className="text-muted/50" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
+          <p className="text-[10px] text-muted/50">
+            {file.filetype.toUpperCase()}{file.size ? ` · ${formatFileSize(file.size)}` : ""}
+          </p>
+        </div>
+        <ExternalLink size={12} className="shrink-0 text-muted/30 group-hover/file:text-primary transition-colors" />
       </div>
-      <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
-        <ExternalLink size={12} />
-      </a>
-    </div>
+    </a>
   );
 }
 
@@ -346,46 +329,213 @@ function AttachmentCard({ att }: { att: SlackAttachment }) {
   );
 }
 
-// ─── Reactions row ──────────────────────────────────────────
+// ─── Emoji resolver (node-emoji + Slack aliases + custom) ───
 
-function ReactionsRow({ reactions }: { reactions: { name: string; count: number }[] }) {
-  return (
-    <div className="mt-1.5 flex flex-wrap gap-1">
-      {reactions.map((r) => (
-        <span
-          key={r.name}
-          className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-accent/40 px-2 py-0.5 text-[10px] transition-colors hover:bg-accent"
-          title={`:${r.name}:`}
-        >
-          <span>{emojiFromName(r.name)}</span>
-          <span className="font-medium text-muted/70">{r.count}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
+import { get as getEmoji } from "node-emoji";
 
-const EMOJI_MAP: Record<string, string> = {
-  "+1": "\u{1F44D}", thumbsup: "\u{1F44D}", "-1": "\u{1F44E}", thumbsdown: "\u{1F44E}",
-  heart: "\u{2764}\u{FE0F}", heart_eyes: "\u{1F60D}", joy: "\u{1F602}", fire: "\u{1F525}",
-  rocket: "\u{1F680}", eyes: "\u{1F440}", wave: "\u{1F44B}", pray: "\u{1F64F}",
-  clap: "\u{1F44F}", tada: "\u{1F389}", raised_hands: "\u{1F64C}", muscle: "\u{1F4AA}",
-  100: "\u{1F4AF}", white_check_mark: "\u{2705}", heavy_check_mark: "\u{2714}\u{FE0F}",
-  x: "\u{274C}", question: "\u{2753}", exclamation: "\u{2757}", warning: "\u{26A0}\u{FE0F}",
-  bulb: "\u{1F4A1}", star: "\u{2B50}", sparkles: "\u{2728}", zap: "\u{26A1}",
-  thinking_face: "\u{1F914}", slightly_smiling_face: "\u{1F642}", grinning: "\u{1F600}",
-  sob: "\u{1F62D}", sweat_smile: "\u{1F605}", rolling_on_the_floor_laughing: "\u{1F923}",
-  ok_hand: "\u{1F44C}", point_up: "\u{261D}\u{FE0F}", see_no_evil: "\u{1F648}",
-  party_popper: "\u{1F389}", confetti_ball: "\u{1F38A}", gem: "\u{1F48E}",
-  memo: "\u{1F4DD}", speech_balloon: "\u{1F4AC}", hourglass: "\u{231B}",
-  heavy_plus_sign: "\u{2795}", heavy_minus_sign: "\u{2796}",
-  large_blue_circle: "\u{1F535}", red_circle: "\u{1F534}", green_heart: "\u{1F49A}",
-  blue_heart: "\u{1F499}", purple_heart: "\u{1F49C}", yellow_heart: "\u{1F49B}",
-  skull: "\u{1F480}", poop: "\u{1F4A9}", ghost: "\u{1F47B}", alien: "\u{1F47D}",
+// Slack uses shortcodes without underscores and different names than node-emoji.
+// This map covers the most common Slack-specific names → node-emoji names.
+const SLACK_TO_STANDARD: Record<string, string> = {
+  // Slack merges words, node-emoji uses underscores
+  slightlysmilingface: "slightly_smiling_face",
+  slightlyfrrowningface: "slightly_frowning_face",
+  upsidedownface: "upside_down_face",
+  thinkingface: "thinking_face",
+  rollingeyes: "roll_eyes",
+  zippermouthface: "zipper_mouth_face",
+  moneymoothface: "money_mouth_face",
+  nerdface: "nerd_face",
+  facewithtearsofjoy: "joy",
+  facewithrollingeyes: "roll_eyes",
+  // Common Slack names → node-emoji equivalents
+  thumbsup: "+1",
+  thumbsdown: "-1",
+  thumbs_up: "+1",
+  thumbs_down: "-1",
+  hankey: "poop",
+  shit: "poop",
+  "simple_smile": "slightly_smiling_face",
+  squirrel: "chipmunk",
+  shipit: "chipmunk",
+  // Hearts
+  heavyheart: "heart",
+  yellowheart: "yellow_heart",
+  greenheart: "green_heart",
+  blueheart: "blue_heart",
+  purpleheart: "purple_heart",
+  blackheart: "black_heart",
+  brokenheart: "broken_heart",
+  sparkling_heart: "sparkling_heart",
+  heartpulse: "heartpulse",
+  // Hands & gestures
+  raisedhand: "hand",
+  raisedhandswitchfingerssplayed: "raised_hand_with_fingers_splayed",
+  "ok_hand": "ok_hand",
+  callmefhand: "call_me_hand",
+  raisedbackofhand: "raised_back_of_hand",
+  fistbump: "fist_oncoming",
+  leftfacingfist: "fist_left",
+  rightfacingfist: "fist_right",
+  clappinghands: "clap",
+  openhandss: "open_hands",
+  palmsuptogether: "palms_up_together",
+  wavinghand: "wave",
+  iloveyouhandgesture: "love_you_gesture",
+  // Faces
+  grinningface: "grinning",
+  grinningfacewithbigeyes: "smiley",
+  grinningfacewithsweat: "sweat_smile",
+  beamingfacewithsmilingeyes: "grin",
+  grinningfacewithsquintingeyes: "laughing",
+  sweatsmile: "sweat_smile",
+  facewithtearsof_joy: "joy",
+  rollingonthefloorlaughing: "rofl",
+  winkingface: "wink",
+  smilingfacewithsmilingeyes: "blush",
+  faceblowingakiss: "kissing_heart",
+  smilingfacewithhearts: "smiling_face_with_three_hearts",
+  starsstruck: "star_struck",
+  facesavoringfood: "yum",
+  smilingfacewithsunglasses: "sunglasses",
+  partyingface: "partying_face",
+  smilingfacewithhalo: "innocent",
+  cowboyhatface: "cowboy_hat_face",
+  clownface: "clown_face",
+  lyingface: "lying_face",
+  shushingface: "shushing_face",
+  facewithhanndovermouthh: "hand_over_mouth",
+  facewithmonocle: "monocle_face",
+  confusedface: "confused",
+  worriedface: "worried",
+  slightlyfrrowningface2: "slightly_frowning_face",
+  facewithopenmmouth: "open_mouth",
+  hushedface: "hushed",
+  astonishedface: "astonished",
+  flushedface: "flushed",
+  pleadingface: "pleading_face",
+  cryingface: "cry",
+  loudlycryingface: "sob",
+  facescreamingiinfear: "scream",
+  hotface: "hot_face",
+  coldface: "cold_face",
+  wearyface: "weary",
+  tiredface: "tired_face",
+  yawningface: "yawning_face",
+  facewithlookoftriumph: "triumph",
+  angryface: "angry",
+  // Objects & symbols
+  partypopper: "tada",
+  confettiball: "confetti_ball",
+  redcircle: "red_circle",
+  largecircle: "large_blue_circle",
+  whitecheckmark: "white_check_mark",
+  heavycheckmark: "heavy_check_mark",
+  heavypluissign: "heavy_plus_sign",
+  heavyminussign: "heavy_minus_sign",
+  heavymultiplicationsign: "heavy_multiplication_x",
+  speechballoon: "speech_balloon",
+  thoughtballoon: "thought_balloon",
+  // Slack-only shortcodes that map to standard emoji
+  thanks: "pray",
+  thank_you: "pray",
+  "e-mail": "email",
+  memo: "memo",
 };
 
-function emojiFromName(name: string): string {
-  return EMOJI_MAP[name] || `:${name}:`;
+type EmojiResult =
+  | { type: "unicode"; value: string }
+  | { type: "image"; url: string }
+  | { type: "text"; value: string };
+
+function resolveEmoji(
+  name: string,
+  customEmojis?: Map<string, string>
+): EmojiResult {
+  // Strip skin tone suffixes for lookup, e.g. "+1::skin-tone-2"
+  const baseName = name.replace(/::skin-tone-\d/, "");
+
+  // 1. Check custom workspace emojis first
+  if (customEmojis?.has(name)) {
+    const url = customEmojis.get(name)!;
+    if (url.startsWith("alias:")) {
+      return resolveEmoji(url.slice(6), customEmojis);
+    }
+    return { type: "image", url };
+  }
+  if (customEmojis?.has(baseName)) {
+    const url = customEmojis.get(baseName)!;
+    if (url.startsWith("alias:")) {
+      return resolveEmoji(url.slice(6), customEmojis);
+    }
+    return { type: "image", url };
+  }
+
+  // 2. Try node-emoji directly
+  const direct = getEmoji(name) || getEmoji(baseName);
+  if (direct) return { type: "unicode", value: direct };
+
+  // 3. Try Slack alias → node-emoji
+  const mapped = SLACK_TO_STANDARD[name] || SLACK_TO_STANDARD[baseName];
+  if (mapped) {
+    const emoji = getEmoji(mapped);
+    if (emoji) return { type: "unicode", value: emoji };
+  }
+
+  // 4. Try converting Slack's no-underscore format to underscored
+  // e.g. "slightlysmilingface" won't match but if we can't find it
+  // in the alias map, try adding underscores before common suffixes
+  const withUnderscores = name
+    .replace(/face$/, "_face")
+    .replace(/hand$/, "_hand")
+    .replace(/heart$/, "_heart")
+    .replace(/eyes$/, "_eyes")
+    .replace(/mark$/, "_mark")
+    .replace(/sign$/, "_sign");
+  if (withUnderscores !== name) {
+    const emoji = getEmoji(withUnderscores);
+    if (emoji) return { type: "unicode", value: emoji };
+  }
+
+  // 5. Fallback — show as text
+  return { type: "text", value: `:${name}:` };
+}
+
+// ─── Reactions row (Slack-standard) ─────────────────────────
+
+function ReactionsRow({
+  reactions,
+  customEmojis,
+}: {
+  reactions: { name: string; count: number }[];
+  customEmojis?: Map<string, string>;
+}) {
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {reactions.map((r) => {
+        const resolved = resolveEmoji(r.name, customEmojis);
+        return (
+          <span
+            key={r.name}
+            className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-accent/40 px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent hover:border-primary/20 cursor-default"
+            title={`:${r.name}:`}
+          >
+            {resolved.type === "image" ? (
+              <img
+                src={resolved.url}
+                alt={`:${r.name}:`}
+                className="h-4 w-4 object-contain"
+              />
+            ) : (
+              <span className="text-[15px] leading-none">
+                {resolved.type === "unicode" ? resolved.value : resolved.value}
+              </span>
+            )}
+            <span className="font-medium text-foreground/60 tabular-nums">{r.count}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function SlackPage() {
@@ -407,6 +557,7 @@ export default function SlackPage() {
     resolveUserName,
     togglePin,
     loadThreadReplies,
+    customEmojis,
   } = useSlack();
   const toast = useToast();
 
@@ -898,14 +1049,14 @@ export default function SlackPage() {
                                   !grouped && "mt-0.5"
                                 )}
                               >
-                                <RichText text={msg.text} />
+                                <RichText text={msg.text} customEmojis={customEmojis} />
                               </div>
 
                               {/* Files */}
                               {msg.files && msg.files.length > 0 && (
                                 <div className="space-y-1">
                                   {msg.files.map((f) => (
-                                    <FilePreview key={f.id} file={f} token={settings.slack?.token || ""} />
+                                    <FilePreview key={f.id} file={f} />
                                   ))}
                                 </div>
                               )}
@@ -921,7 +1072,7 @@ export default function SlackPage() {
 
                               {/* Reactions */}
                               {msg.reactions && msg.reactions.length > 0 && (
-                                <ReactionsRow reactions={msg.reactions} />
+                                <ReactionsRow reactions={msg.reactions} customEmojis={customEmojis} />
                               )}
 
                               {/* Thread button */}
@@ -1122,14 +1273,14 @@ export default function SlackPage() {
                                       </span>
                                     </div>
                                     <div dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
-                                      <RichText text={reply.text} />
+                                      <RichText text={reply.text} customEmojis={customEmojis} />
                                     </div>
 
                                     {/* Reply files */}
                                     {reply.files && reply.files.length > 0 && (
                                       <div className="space-y-1">
                                         {reply.files.map((f) => (
-                                          <FilePreview key={f.id} file={f} token={settings.slack?.token || ""} />
+                                          <FilePreview key={f.id} file={f} />
                                         ))}
                                       </div>
                                     )}
@@ -1145,7 +1296,7 @@ export default function SlackPage() {
 
                                     {/* Reply reactions */}
                                     {reply.reactions && reply.reactions.length > 0 && (
-                                      <ReactionsRow reactions={reply.reactions} />
+                                      <ReactionsRow reactions={reply.reactions} customEmojis={customEmojis} />
                                     )}
 
                                     {/* Reply translation */}

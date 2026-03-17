@@ -1,13 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Settings, Users, Hash } from "lucide-react";
+import { Settings, Hash, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Chats", icon: MessageCircle },
   { href: "/slack", label: "Slack", icon: Hash },
-  { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/", label: "Translate", icon: Languages },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -17,8 +16,9 @@ export default function Navbar() {
   return (
     <nav className="glass border-b border-border">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
-        <Link href="/" className="text-lg font-bold text-foreground">
-          lii
+        <Link href="/" className="flex items-center gap-1.5">
+          <img src="/app-icon.png" alt="lii" width={28} height={28} className="rounded-md" />
+          <span className="text-lg font-bold text-foreground">lii</span>
         </Link>
         <div className="flex items-center gap-0.5">
           {navItems.map(({ href, label, icon: Icon }) => {
