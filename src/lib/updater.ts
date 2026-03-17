@@ -27,23 +27,30 @@ export async function checkForAppUpdates() {
         let downloaded = 0;
         let total = 0;
 
-        await update.downloadAndInstall((event) => {
-          switch (event.event) {
-            case "Started":
-              total = event.data.contentLength ?? 0;
-              break;
-            case "Progress":
-              downloaded += event.data.chunkLength;
-              if (total > 0 && onProgress) {
-                onProgress(Math.round((downloaded / total) * 100));
-              }
-              break;
-            case "Finished":
-              break;
-          }
-        });
-
-        await relaunch();
+        try {
+          await update.downloadAndInstall((event) => {
+            switch (event.event) {
+              case "Started":
+                total = event.data.contentLength ?? 0;
+                console.log("[updater] Download started, size:", total);
+                break;
+              case "Progress":
+                downloaded += event.data.chunkLength;
+                if (total > 0 && onProgress) {
+                  onProgress(Math.round((downloaded / total) * 100));
+                }
+                break;
+              case "Finished":
+                console.log("[updater] Download finished, installing...");
+                break;
+            }
+          });
+          console.log("[updater] Install complete, relaunching...");
+          await relaunch();
+        } catch (e) {
+          console.error("[updater] Download/install failed:", e);
+          throw e;
+        }
       },
     };
   } catch (e) {

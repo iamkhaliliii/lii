@@ -36,6 +36,7 @@ export default function SettingsPage() {
     status: "success" | "error" | null;
     user?: string;
     team?: string;
+    error?: string;
   }>({ status: null });
 
   const slackToken = settings.slack?.token || "";
@@ -56,12 +57,13 @@ export default function SettingsPage() {
         toast.success(`Connected as ${result.user}`);
       } else {
         updateSettings({ slack: { token: slackToken, connected: false } });
-        setSlackTestResult({ status: "error" });
-        toast.error("Slack connection failed");
+        setSlackTestResult({ status: "error", error: result.error });
+        toast.error(result.error || "Slack connection failed");
       }
-    } catch {
-      setSlackTestResult({ status: "error" });
-      toast.error("Slack connection failed");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      setSlackTestResult({ status: "error", error: msg });
+      toast.error(msg);
     } finally {
       setSlackTesting(false);
     }
@@ -357,7 +359,7 @@ export default function SettingsPage() {
             )}
             {slackTestResult.status === "error" && (
               <p className="text-xs text-danger">
-                Failed to connect. Check your token and try again.
+                Failed to connect{slackTestResult.error ? `: ${slackTestResult.error}` : ". Check your token and try again."}
               </p>
             )}
           </div>

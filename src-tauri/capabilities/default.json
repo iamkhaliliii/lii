@@ -13,9 +13,7 @@
     {
       "identifier": "http:allow-fetch",
       "allow": [
-        { "url": "https://slack.com/api/*" },
-        { "url": "https://github.com/**" },
-        { "url": "https://objects.githubusercontent.com/**" }
+        { "url": "https://slack.com/api/*" }
       ]
     }
   ]

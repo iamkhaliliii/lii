@@ -17,15 +17,28 @@ export default function UpdateBanner() {
 
   if (!update || dismissed) return null;
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleInstall = async () => {
     setInstalling(true);
-    await update.downloadAndInstall((p) => setProgress(p));
+    setError(null);
+    try {
+      await update.downloadAndInstall((p) => setProgress(p));
+    } catch (e) {
+      console.error("[updater] Install error:", e);
+      setError(e instanceof Error ? e.message : "Update failed");
+      setInstalling(false);
+    }
   };
 
   return (
     <div className="flex items-center justify-between gap-3 bg-primary/10 px-4 py-2 text-sm">
       <span>
-        Update <strong>v{update.version}</strong> is available
+        {error ? (
+          <span className="text-red-600">{error}</span>
+        ) : (
+          <>Update <strong>v{update.version}</strong> is available</>
+        )}
       </span>
       <div className="flex items-center gap-2">
         {installing ? (

@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { useSlack } from "@/hooks/useSlack";
 import { useSettings } from "@/hooks/useSettings";
 import { translateDirect, polishReplyDirect } from "@/lib/ai/client-direct";
-import { SlackConversation, SlackMessage } from "@/types";
+import { SlackConversation, SlackMessage, SlackFile, SlackAttachment } from "@/types";
 import {
   Hash,
   MessageCircle,
@@ -25,6 +25,11 @@ import {
   Copy,
   Check,
   Sparkles,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  ExternalLink,
+  Link as LinkIcon,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
@@ -99,6 +104,288 @@ function AvatarStack({ urls, size = 28 }: { urls: string[]; size?: number }) {
       ))}
     </div>
   );
+}
+
+// ─── Rich text: parse links and format ──────────────────────
+
+function RichText({ text }: { text: string }) {
+  // Parse Slack mrkdwn: <url>, <url|label>, *bold*, _italic_, ~strike~, `code`
+  const parts: React.ReactNode[] = [];
+  // Combined regex for slack links and raw URLs
+  const pattern = /(<(https?:\/\/[^|>]+)(?:\|([^>]+))?>)|(https?:\/\/[^\s<>)\]]+)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      parts.push(formatInline(text.slice(lastIndex, match.index), parts.length));
+    }
+
+    const url = match[2] || match[4]; // slack link URL or raw URL
+    const label = match[3] || cleanUrl(url);
+
+    parts.push(
+      <a
+        key={`link-${parts.length}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-0.5 text-primary/80 hover:text-primary hover:underline transition-colors break-all"
+      >
+        <LinkIcon size={10} className="shrink-0 opacity-50" />
+        <span>{label}</span>
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(formatInline(text.slice(lastIndex), parts.length));
+  }
+
+  return <>{parts}</>;
+}
+
+function cleanUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    const path = u.pathname === "/" ? "" : u.pathname;
+    const display = host + path;
+    return display.length > 60 ? display.slice(0, 57) + "…" : display;
+  } catch {
+    return url.length > 60 ? url.slice(0, 57) + "…" : url;
+  }
+}
+
+function formatInline(text: string, keyBase: number): React.ReactNode {
+  // Simple inline formatting: *bold*, _italic_, ~strike~, `code`
+  const parts: React.ReactNode[] = [];
+  const inlinePattern = /(\*[^*\n]+\*)|(_[^_\n]+_)|(~[^~\n]+~)|(`[^`\n]+`)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = inlinePattern.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const raw = m[0];
+    const inner = raw.slice(1, -1);
+    if (raw.startsWith("*")) parts.push(<strong key={`b-${keyBase}-${m.index}`}>{inner}</strong>);
+    else if (raw.startsWith("_")) parts.push(<em key={`i-${keyBase}-${m.index}`}>{inner}</em>);
+    else if (raw.startsWith("~")) parts.push(<s key={`s-${keyBase}-${m.index}`} className="opacity-60">{inner}</s>);
+    else if (raw.startsWith("`")) parts.push(<code key={`c-${keyBase}-${m.index}`} className="rounded bg-accent px-1 py-0.5 text-[11px] font-mono">{inner}</code>);
+    last = m.index + raw.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
+}
+
+// ─── File attachment rendering ──────────────────────────────
+
+function FilePreview({ file, token }: { file: SlackFile; token: string }) {
+  const isImage = file.mimetype?.startsWith("image/");
+  const isVideo = file.mimetype?.startsWith("video/");
+  const thumb = file.thumb480 || file.thumb360 || file.thumbVideo;
+
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  if (isImage && thumb) {
+    return (
+      <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block mt-1.5">
+        <div className="relative overflow-hidden rounded-lg border border-border-subtle max-w-[320px]">
+          <img
+            src={thumb}
+            alt={file.name}
+            className="block w-full object-cover transition-transform group-hover/file:scale-[1.02]"
+            style={{ maxHeight: 240 }}
+            onError={(e) => {
+              // If direct load fails (auth required), show placeholder
+              (e.target as HTMLImageElement).style.display = "none";
+              (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+          <div className="hidden items-center justify-center bg-accent/50 py-8">
+            <ImageIcon size={24} className="text-muted/40" />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-4 opacity-0 group-hover/file:opacity-100 transition-opacity">
+            <span className="text-[10px] text-white/90 font-medium">{file.name}</span>
+          </div>
+        </div>
+      </a>
+    );
+  }
+
+  if (isImage && !thumb) {
+    return (
+      <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5 max-w-[320px]">
+        <ImageIcon size={18} className="shrink-0 text-primary/50" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
+          {file.size && <p className="text-[10px] text-muted/50">{formatFileSize(file.size)}</p>}
+        </div>
+        <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
+          <ExternalLink size={12} />
+        </a>
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div className="mt-1.5 max-w-[320px]">
+        {file.thumbVideo || thumb ? (
+          <a href={file.url} target="_blank" rel="noopener noreferrer" className="group/file block">
+            <div className="relative overflow-hidden rounded-lg border border-border-subtle">
+              <img
+                src={file.thumbVideo || thumb}
+                alt={file.name}
+                className="block w-full object-cover"
+                style={{ maxHeight: 200 }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                }}
+              />
+              <div className="hidden items-center justify-center bg-accent/50 py-8">
+                <Film size={24} className="text-muted/40" />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-transform group-hover/file:scale-110">
+                  <Film size={18} />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-4">
+                <span className="text-[10px] text-white/90 font-medium">{file.name}</span>
+              </div>
+            </div>
+          </a>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5">
+            <Film size={18} className="shrink-0 text-purple-500/60" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
+              {file.size && <p className="text-[10px] text-muted/50">{formatFileSize(file.size)}</p>}
+            </div>
+            <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Generic file
+  return (
+    <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border-subtle bg-accent/30 px-3 py-2.5 max-w-[320px]">
+      <FileText size={18} className="shrink-0 text-muted/50" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12px] font-medium text-foreground/80">{file.name}</p>
+        <p className="text-[10px] text-muted/50">
+          {file.filetype.toUpperCase()}{file.size ? ` · ${formatFileSize(file.size)}` : ""}
+        </p>
+      </div>
+      <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted/40 hover:text-primary transition-colors">
+        <ExternalLink size={12} />
+      </a>
+    </div>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ─── Link unfurl / attachment card ──────────────────────────
+
+function AttachmentCard({ att }: { att: SlackAttachment }) {
+  const hasImage = !!(att.imageUrl || att.thumbUrl);
+  return (
+    <div
+      className="mt-1.5 overflow-hidden rounded-lg border border-border-subtle max-w-[400px]"
+      style={att.color ? { borderLeftWidth: 3, borderLeftColor: `#${att.color}` } : undefined}
+    >
+      {att.imageUrl && (
+        <a href={att.titleLink || att.fromUrl || att.imageUrl} target="_blank" rel="noopener noreferrer">
+          <img
+            src={att.imageUrl}
+            alt={att.title || ""}
+            className="w-full object-cover"
+            style={{ maxHeight: 200 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </a>
+      )}
+      <div className="px-3 py-2">
+        {att.serviceName && (
+          <div className="flex items-center gap-1.5 mb-1">
+            {att.serviceIcon && <img src={att.serviceIcon} alt="" className="h-3.5 w-3.5 rounded" />}
+            <span className="text-[10px] font-medium text-muted/50">{att.serviceName}</span>
+          </div>
+        )}
+        {att.title && (
+          <a
+            href={att.titleLink || att.fromUrl || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[12px] font-semibold text-primary/80 hover:text-primary hover:underline leading-snug"
+          >
+            {att.title}
+          </a>
+        )}
+        {att.text && (
+          <p className="mt-1 text-[11px] leading-relaxed text-foreground/70 line-clamp-3">{att.text}</p>
+        )}
+        {!att.imageUrl && att.thumbUrl && (
+          <img src={att.thumbUrl} alt="" className="mt-1.5 rounded max-h-[80px] object-cover" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Reactions row ──────────────────────────────────────────
+
+function ReactionsRow({ reactions }: { reactions: { name: string; count: number }[] }) {
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {reactions.map((r) => (
+        <span
+          key={r.name}
+          className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-accent/40 px-2 py-0.5 text-[10px] transition-colors hover:bg-accent"
+          title={`:${r.name}:`}
+        >
+          <span>{emojiFromName(r.name)}</span>
+          <span className="font-medium text-muted/70">{r.count}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const EMOJI_MAP: Record<string, string> = {
+  "+1": "\u{1F44D}", thumbsup: "\u{1F44D}", "-1": "\u{1F44E}", thumbsdown: "\u{1F44E}",
+  heart: "\u{2764}\u{FE0F}", heart_eyes: "\u{1F60D}", joy: "\u{1F602}", fire: "\u{1F525}",
+  rocket: "\u{1F680}", eyes: "\u{1F440}", wave: "\u{1F44B}", pray: "\u{1F64F}",
+  clap: "\u{1F44F}", tada: "\u{1F389}", raised_hands: "\u{1F64C}", muscle: "\u{1F4AA}",
+  100: "\u{1F4AF}", white_check_mark: "\u{2705}", heavy_check_mark: "\u{2714}\u{FE0F}",
+  x: "\u{274C}", question: "\u{2753}", exclamation: "\u{2757}", warning: "\u{26A0}\u{FE0F}",
+  bulb: "\u{1F4A1}", star: "\u{2B50}", sparkles: "\u{2728}", zap: "\u{26A1}",
+  thinking_face: "\u{1F914}", slightly_smiling_face: "\u{1F642}", grinning: "\u{1F600}",
+  sob: "\u{1F62D}", sweat_smile: "\u{1F605}", rolling_on_the_floor_laughing: "\u{1F923}",
+  ok_hand: "\u{1F44C}", point_up: "\u{261D}\u{FE0F}", see_no_evil: "\u{1F648}",
+  party_popper: "\u{1F389}", confetti_ball: "\u{1F38A}", gem: "\u{1F48E}",
+  memo: "\u{1F4DD}", speech_balloon: "\u{1F4AC}", hourglass: "\u{231B}",
+  heavy_plus_sign: "\u{2795}", heavy_minus_sign: "\u{2796}",
+  large_blue_circle: "\u{1F535}", red_circle: "\u{1F534}", green_heart: "\u{1F49A}",
+  blue_heart: "\u{1F499}", purple_heart: "\u{1F49C}", yellow_heart: "\u{1F49B}",
+  skull: "\u{1F480}", poop: "\u{1F4A9}", ghost: "\u{1F47B}", alien: "\u{1F47D}",
+};
+
+function emojiFromName(name: string): string {
+  return EMOJI_MAP[name] || `:${name}:`;
 }
 
 export default function SlackPage() {
@@ -604,15 +891,38 @@ export default function SlackPage() {
                                   </span>
                                 </div>
                               )}
-                              <p
+                              <div
                                 dir="auto"
                                 className={cn(
                                   "text-[13px] leading-relaxed text-foreground/85 whitespace-pre-wrap break-words",
                                   !grouped && "mt-0.5"
                                 )}
                               >
-                                {msg.text}
-                              </p>
+                                <RichText text={msg.text} />
+                              </div>
+
+                              {/* Files */}
+                              {msg.files && msg.files.length > 0 && (
+                                <div className="space-y-1">
+                                  {msg.files.map((f) => (
+                                    <FilePreview key={f.id} file={f} token={settings.slack?.token || ""} />
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Attachments / link unfurls */}
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <div className="space-y-1">
+                                  {msg.attachments.map((att, ai) => (
+                                    <AttachmentCard key={ai} att={att} />
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Reactions */}
+                              {msg.reactions && msg.reactions.length > 0 && (
+                                <ReactionsRow reactions={msg.reactions} />
+                              )}
 
                               {/* Thread button */}
                               {(msg.replyCount ?? 0) > 0 && !msg.isThread && activeChannelId && (
@@ -811,9 +1121,32 @@ export default function SlackPage() {
                                         {getMsgTime(reply.timestamp)}
                                       </span>
                                     </div>
-                                    <p dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
-                                      {reply.text}
-                                    </p>
+                                    <div dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
+                                      <RichText text={reply.text} />
+                                    </div>
+
+                                    {/* Reply files */}
+                                    {reply.files && reply.files.length > 0 && (
+                                      <div className="space-y-1">
+                                        {reply.files.map((f) => (
+                                          <FilePreview key={f.id} file={f} token={settings.slack?.token || ""} />
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Reply attachments */}
+                                    {reply.attachments && reply.attachments.length > 0 && (
+                                      <div className="space-y-1">
+                                        {reply.attachments.map((att, ai) => (
+                                          <AttachmentCard key={ai} att={att} />
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Reply reactions */}
+                                    {reply.reactions && reply.reactions.length > 0 && (
+                                      <ReactionsRow reactions={reply.reactions} />
+                                    )}
 
                                     {/* Reply translation */}
                                     {translatingTs === reply.ts && (
