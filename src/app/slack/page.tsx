@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { useSlack } from "@/hooks/useSlack";
 import { useSettings } from "@/hooks/useSettings";
 import { translateDirect, polishReplyDirect } from "@/lib/ai/client-direct";
-import { SlackConversation, SlackMessage } from "@/types";
+import { SlackConversation, SlackMessage, SlackFile, SlackReaction, SlackAttachment } from "@/types";
 import {
   Hash,
   MessageCircle,
@@ -25,6 +25,11 @@ import {
   Copy,
   Check,
   Sparkles,
+  FileIcon,
+  Image as ImageIcon,
+  Film,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
@@ -71,6 +76,152 @@ function getConversationIcon(type: SlackConversation["type"]) {
     default:
       return Hash;
   }
+}
+
+// ─── Rich text: parse Slack mrkdwn (links, bold, italic, code) ─────
+
+function RichText({ text }: { text: string }) {
+  // Parse Slack-formatted text into React elements
+  const parts: React.ReactNode[] = [];
+  // Regex for Slack links: <url|label> or <url> and also <@USER> (already resolved)
+  const regex = /(<https?:\/\/[^>|]+(?:\|[^>]+)?>)|(\*[^*]+\*)|(_[^_]+_)|(`[^`]+`)|(:[\w+-]+:)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    const full = match[0];
+    if (full.startsWith("<http")) {
+      // Link: <url|label> or <url>
+      const inner = full.slice(1, -1);
+      const pipeIdx = inner.indexOf("|");
+      const url = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
+      const label = pipeIdx >= 0 ? inner.slice(pipeIdx + 1) : url.replace(/^https?:\/\//, "").slice(0, 40);
+      parts.push(
+        <a
+          key={match.index}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-blue-600 dark:text-blue-400 hover:underline break-all"
+        >
+          {label}
+          <ExternalLink size={10} className="shrink-0 opacity-50" />
+        </a>
+      );
+    } else if (full.startsWith("*") && full.endsWith("*")) {
+      parts.push(<strong key={match.index} className="font-semibold">{full.slice(1, -1)}</strong>);
+    } else if (full.startsWith("_") && full.endsWith("_")) {
+      parts.push(<em key={match.index}>{full.slice(1, -1)}</em>);
+    } else if (full.startsWith("`") && full.endsWith("`")) {
+      parts.push(
+        <code key={match.index} className="rounded bg-accent px-1 py-0.5 text-[12px] font-mono text-pink-600 dark:text-pink-400">
+          {full.slice(1, -1)}
+        </code>
+      );
+    } else if (full.startsWith(":") && full.endsWith(":")) {
+      // Emoji shortcode - just render as text for now
+      parts.push(<span key={match.index}>{full}</span>);
+    } else {
+      parts.push(full);
+    }
+    lastIndex = match.index + full.length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return <>{parts}</>;
+}
+
+// ─── File preview placeholder ────────────────────────────────
+
+function FilePreview({ file }: { file: SlackFile }) {
+  const isImage = file.mimetype?.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(file.filetype);
+  const isVideo = file.mimetype?.startsWith("video/") || ["mp4", "mov", "webm"].includes(file.filetype);
+  const Icon = isImage ? ImageIcon : isVideo ? Film : FileIcon;
+  const sizeStr = file.size ? (file.size > 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`) : "";
+
+  return (
+    <div className="mt-1.5 inline-flex items-center gap-2.5 rounded-lg border border-border/60 bg-accent/30 px-3 py-2 max-w-xs">
+      <div className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+        isImage ? "bg-blue-100 dark:bg-blue-900/30" : isVideo ? "bg-purple-100 dark:bg-purple-900/30" : "bg-gray-100 dark:bg-gray-800/50"
+      )}>
+        <Icon size={14} className={isImage ? "text-blue-500" : isVideo ? "text-purple-500" : "text-gray-500"} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-foreground/80 truncate">{file.name}</p>
+        <p className="text-[9px] text-muted/40">
+          {isImage ? "Image" : isVideo ? "Video" : file.filetype.toUpperCase()}
+          {sizeStr && ` · ${sizeStr}`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reactions row ───────────────────────────────────────────
+
+function ReactionsRow({ reactions }: { reactions: SlackReaction[] }) {
+  if (!reactions || reactions.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {reactions.map((r) => (
+        <span
+          key={r.name}
+          className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-accent/40 px-2 py-0.5 text-[11px]"
+          title={`:${r.name}:`}
+        >
+          <span>:{r.name}:</span>
+          <span className="text-[10px] font-medium text-muted/60">{r.count}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ─── Attachment card (link unfurls) ──────────────────────────
+
+function AttachmentCard({ att }: { att: SlackAttachment }) {
+  const borderColor = att.color ? `#${att.color}` : undefined;
+  return (
+    <div
+      className="mt-1.5 rounded-lg border border-border/50 bg-accent/20 overflow-hidden max-w-sm"
+      style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
+    >
+      <div className="px-3 py-2">
+        {att.serviceName && (
+          <p className="text-[9px] font-medium text-muted/50 uppercase tracking-wide mb-0.5">{att.serviceName}</p>
+        )}
+        {att.title && (
+          <p className="text-[12px] font-medium text-foreground/80">
+            {att.titleLink ? (
+              <a href={att.titleLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1">
+                {att.title}
+                <ExternalLink size={9} className="opacity-50" />
+              </a>
+            ) : att.title}
+          </p>
+        )}
+        {att.text && (
+          <p className="mt-1 text-[11px] text-foreground/60 line-clamp-3 leading-relaxed">{att.text}</p>
+        )}
+        {!att.title && att.fromUrl && (
+          <a href={att.fromUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 break-all">
+            <Link2 size={10} className="shrink-0" />
+            {att.fromUrl.replace(/^https?:\/\//, "").slice(0, 50)}
+          </a>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function AvatarStack({ urls, size = 28 }: { urls: string[]; size?: number }) {
@@ -604,15 +755,38 @@ export default function SlackPage() {
                                   </span>
                                 </div>
                               )}
-                              <p
+                              <div
                                 dir="auto"
                                 className={cn(
                                   "text-[13px] leading-relaxed text-foreground/85 whitespace-pre-wrap break-words",
                                   !grouped && "mt-0.5"
                                 )}
                               >
-                                {msg.text}
-                              </p>
+                                <RichText text={msg.text} />
+                              </div>
+
+                              {/* Files */}
+                              {msg.files && msg.files.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {msg.files.map((f) => (
+                                    <FilePreview key={f.id} file={f} />
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Attachments (link unfurls) */}
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <div className="space-y-1">
+                                  {msg.attachments.map((att, i) => (
+                                    <AttachmentCard key={i} att={att} />
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Reactions */}
+                              {msg.reactions && msg.reactions.length > 0 && (
+                                <ReactionsRow reactions={msg.reactions} />
+                              )}
 
                               {/* Thread button */}
                               {(msg.replyCount ?? 0) > 0 && !msg.isThread && activeChannelId && (

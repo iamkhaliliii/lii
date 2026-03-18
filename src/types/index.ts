@@ -84,6 +84,30 @@ export interface SlackConversation {
   pinned?: boolean;
 }
 
+export interface SlackFile {
+  id: string;
+  name: string;
+  mimetype: string;
+  filetype: string;
+  size?: number;
+}
+
+export interface SlackReaction {
+  name: string;
+  count: number;
+  users: string[];
+}
+
+export interface SlackAttachment {
+  title?: string;
+  titleLink?: string;
+  text?: string;
+  pretext?: string;
+  fromUrl?: string;
+  serviceName?: string;
+  color?: string;
+}
+
 export interface SlackMessage {
   ts: string;
   userId: string;
@@ -94,6 +118,9 @@ export interface SlackMessage {
   threadTs?: string;
   isThread?: boolean;
   replyCount?: number;
+  files?: SlackFile[];
+  reactions?: SlackReaction[];
+  attachments?: SlackAttachment[];
 }
 
 export interface SlackUser {

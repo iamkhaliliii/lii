@@ -1,4 +1,4 @@
-import { SlackConversation, SlackMessage, SlackUser } from "@/types";
+import { SlackConversation, SlackMessage, SlackUser, SlackFile, SlackReaction, SlackAttachment } from "@/types";
 import { isTauri } from "./auth";
 
 const BASE = "https://slack.com/api";
@@ -182,6 +182,47 @@ export async function refreshPinnedTimestamps(
   return conversations;
 }
 
+// ─── Rich message parsers ────────────────────────────────────
+
+function parseFiles(raw: unknown[]): SlackFile[] {
+  return raw.map((f: unknown) => {
+    const file = f as Record<string, unknown>;
+    return {
+      id: (file.id as string) || "",
+      name: (file.name as string) || "file",
+      mimetype: (file.mimetype as string) || "",
+      filetype: (file.filetype as string) || "",
+      size: file.size as number | undefined,
+    };
+  });
+}
+
+function parseReactions(raw: unknown[]): SlackReaction[] {
+  return raw.map((r: unknown) => {
+    const reaction = r as Record<string, unknown>;
+    return {
+      name: (reaction.name as string) || "",
+      count: (reaction.count as number) || 0,
+      users: (reaction.users as string[]) || [],
+    };
+  });
+}
+
+function parseAttachments(raw: unknown[]): SlackAttachment[] {
+  return raw.map((a: unknown) => {
+    const att = a as Record<string, unknown>;
+    return {
+      title: att.title as string | undefined,
+      titleLink: (att.title_link as string) || (att.from_url as string) || undefined,
+      text: att.text as string | undefined,
+      pretext: att.pretext as string | undefined,
+      fromUrl: att.from_url as string | undefined,
+      serviceName: att.service_name as string | undefined,
+      color: att.color as string | undefined,
+    };
+  });
+}
+
 // ─── Get messages ────────────────────────────────────────────
 
 export async function getSlackMessages(
@@ -206,6 +247,9 @@ export async function getSlackMessages(
       threadTs: m.thread_ts as string | undefined,
       isThread: !!(m.thread_ts && m.thread_ts !== m.ts),
       replyCount: (m.reply_count as number) || 0,
+      files: m.files ? parseFiles(m.files as unknown[]) : undefined,
+      reactions: m.reactions ? parseReactions(m.reactions as unknown[]) : undefined,
+      attachments: m.attachments ? parseAttachments(m.attachments as unknown[]) : undefined,
     }))
     .reverse();
 }
@@ -235,6 +279,9 @@ export async function getSlackThreadReplies(
       threadTs: m.thread_ts as string | undefined,
       isThread: true,
       replyCount: 0,
+      files: m.files ? parseFiles(m.files as unknown[]) : undefined,
+      reactions: m.reactions ? parseReactions(m.reactions as unknown[]) : undefined,
+      attachments: m.attachments ? parseAttachments(m.attachments as unknown[]) : undefined,
     }));
 }
 
