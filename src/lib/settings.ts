@@ -176,6 +176,49 @@ export function updateSettings(partial: Partial<AppSettings>): AppSettings {
   return updated;
 }
 
+function localHasUserContent(s: AppSettings): boolean {
+  if (s.slack?.token) return true;
+  if (s.elevenLabsApiKey) return true;
+  if (Object.values(s.providers).some((p) => p.apiKey)) return true;
+  return false;
+}
+
+function mergeSettings(local: AppSettings, remote: AppSettings): AppSettings {
+  return {
+    ...remote,
+    ...local,
+    slack: {
+      token: "",
+      connected: false,
+      ...remote.slack,
+      ...local.slack,
+      pinnedChannels:
+        local.slack?.pinnedChannels?.length
+          ? local.slack.pinnedChannels
+          : remote.slack?.pinnedChannels || [],
+    },
+    providers: {
+      openai: {
+        ...remote.providers?.openai,
+        ...local.providers?.openai,
+        apiKey: local.providers?.openai?.apiKey || remote.providers?.openai?.apiKey || "",
+      },
+      anthropic: {
+        ...remote.providers?.anthropic,
+        ...local.providers?.anthropic,
+        apiKey: local.providers?.anthropic?.apiKey || remote.providers?.anthropic?.apiKey || "",
+      },
+      google: {
+        ...remote.providers?.google,
+        ...local.providers?.google,
+        apiKey: local.providers?.google?.apiKey || remote.providers?.google?.apiKey || "",
+      },
+    },
+    elevenLabsApiKey: local.elevenLabsApiKey || remote.elevenLabsApiKey || "",
+    rules: local.rules?.length ? local.rules : remote.rules || [],
+  };
+}
+
 // ─── Async functions for hook usage ───────────────────────────
 export async function loadSettingsFromServer(): Promise<AppSettings> {
   if (isTauri()) {
@@ -187,13 +230,25 @@ export async function loadSettingsFromServer(): Promise<AppSettings> {
     return getLocalSettings();
   }
 
+  const local = getLocalSettings();
   const remote = await fetchSettingsFromAPI();
-  if (remote) {
-    setLocalSettings(remote);
-    return remote;
+
+  if (!remote) {
+    if (localHasUserContent(local)) {
+      saveSettingsToAPI(local).catch(() => {});
+    }
+    return local;
   }
 
-  return getLocalSettings();
+  if (localHasUserContent(local)) {
+    const merged = mergeSettings(local, remote);
+    setLocalSettings(merged);
+    saveSettingsToAPI(merged).catch(() => {});
+    return merged;
+  }
+
+  setLocalSettings(remote);
+  return remote;
 }
 
 // ─── Existing helper functions ────────────────────────────────
