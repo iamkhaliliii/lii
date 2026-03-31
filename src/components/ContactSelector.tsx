@@ -170,7 +170,7 @@ export default function ContactSelector({
           <button
             onClick={handleCreate}
             disabled={!newName.trim()}
-            className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
+            className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-background disabled:opacity-40"
           >
             Add
           </button>

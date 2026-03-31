@@ -411,7 +411,7 @@ export default function TranscriptPage() {
               <button
                 onClick={handleAnalyze}
                 disabled={!transcript.trim() || analyzing}
-                className="w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-white transition-all hover:bg-primary-hover active:scale-[0.99] disabled:opacity-40"
+                className="w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-background transition-all hover:bg-primary-hover active:scale-[0.99] disabled:opacity-40"
               >
                 <span className="flex items-center justify-center gap-2">
                   <Zap size={16} />

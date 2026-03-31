@@ -94,7 +94,7 @@ export default function ConversationSidebar({
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold transition-all",
                   isActive
-                    ? "bg-primary text-white ring-2 ring-primary/30"
+                    ? "bg-primary text-background ring-2 ring-primary/30"
                     : "bg-accent text-muted hover:bg-primary-muted hover:text-primary"
                 )}
                 title={conv.title}

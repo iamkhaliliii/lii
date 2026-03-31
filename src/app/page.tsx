@@ -253,7 +253,7 @@ function ResultCard({
               }
             }}
             disabled={!customReply.trim()}
-            className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+            className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-background transition-colors hover:bg-primary-hover disabled:opacity-30"
             title="Polish reply (↵)"
           >
             <ArrowUpRight size={13} />
@@ -710,7 +710,7 @@ export default function TranslatePage() {
               <button
                 onClick={handleSend}
                 disabled={!hasContent || translating}
-                className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-all hover:bg-primary-hover disabled:opacity-30 press md:mb-1 md:h-9 md:w-9"
+                className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-background transition-all hover:bg-primary-hover disabled:opacity-30 press md:mb-1 md:h-9 md:w-9"
                 title={`${isReplyMode ? "Polish reply" : "Translate"} (⌘↵)`}
               >
                 {translating ? (

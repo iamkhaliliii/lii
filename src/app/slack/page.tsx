@@ -304,7 +304,7 @@ export default function SlackPage() {
             </p>
             <button
               onClick={() => router.push("/settings")}
-              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md press"
+              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-background shadow-sm transition-all hover:bg-primary-hover hover:shadow-md press"
             >
               <Settings size={16} />
               Go to Settings
@@ -1019,7 +1019,7 @@ export default function SlackPage() {
                   <button
                     onClick={handleSendReply}
                     disabled={!replyText.trim() || sending}
-                    className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-background transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Send to Slack"
                   >
                     {sending ? (

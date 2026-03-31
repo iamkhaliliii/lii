@@ -247,7 +247,7 @@ export default function ChatMessageBubble({
   return (
     <div className="animate-bubble-in flex justify-end" style={animationDelay ? { animationDelay: `${animationDelay}ms` } : undefined}>
       <div className="max-w-[85%]">
-        <div className="group relative rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-white shadow-sm">
+        <div className="group relative rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-background shadow-sm">
           {/* Polished reply */}
           {message.polishedReply && (
             <p dir="ltr" className="text-sm leading-relaxed">
@@ -258,7 +258,7 @@ export default function ChatMessageBubble({
           {/* Farsi translation */}
           {message.translatedText && (
             <p
-              className="rtl mt-1.5 text-[13px] leading-relaxed text-white/60"
+              className="rtl mt-1.5 text-[13px] leading-relaxed text-background/60"
               style={{
                 fontFamily: "var(--font-vazirmatn), system-ui, sans-serif",
               }}
@@ -279,7 +279,7 @@ export default function ChatMessageBubble({
             message.originalText !== message.polishedReply && (
               <p
                 dir="auto"
-                className="mt-1 text-[11px] text-white/30 line-clamp-1"
+                className="mt-1 text-[11px] text-background/30 line-clamp-1"
               >
                 Draft: {message.originalText}
               </p>
@@ -287,15 +287,15 @@ export default function ChatMessageBubble({
 
           {/* Footer */}
           <div className="mt-2 flex items-center gap-2">
-            <span className="flex items-center gap-1 text-[10px] text-white/30">
+            <span className="flex items-center gap-1 text-[10px] text-background/30">
               <ArrowUpRight size={9} />
               Polished
             </span>
             <div className="flex-1" />
-            <span className="text-[10px] text-white/30">{time}</span>
+            <span className="text-[10px] text-background/30">{time}</span>
             <button
               onClick={handleCopy}
-              className="rounded-md p-1 text-white/30 opacity-0 transition-all hover:text-white group-hover:opacity-100"
+              className="rounded-md p-1 text-background/30 opacity-0 transition-all hover:text-background group-hover:opacity-100"
               title="Copy"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}

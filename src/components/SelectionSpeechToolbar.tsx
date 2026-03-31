@@ -886,7 +886,7 @@ export default function SelectionSpeechToolbar() {
             "disabled:cursor-not-allowed disabled:opacity-45",
             speaking || loading
               ? "bg-foreground/[0.08] text-foreground hover:bg-foreground/[0.11]"
-              : "bg-primary text-white shadow-sm hover:bg-primary-hover dark:text-zinc-950"
+              : "bg-primary text-background shadow-sm hover:bg-primary-hover"
           )}
           title={speaking ? "Stop" : loading ? "Loading…" : "Listen"}
         >

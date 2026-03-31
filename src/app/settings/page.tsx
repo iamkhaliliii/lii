@@ -129,7 +129,7 @@ function RulesSection({
                     <div className="flex gap-2">
                       <button
                         onClick={saveEdit}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-hover"
+                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-background hover:bg-primary-hover"
                       >
                         Save
                       </button>
@@ -187,7 +187,7 @@ function RulesSection({
               <button
                 onClick={addRule}
                 disabled={!newRule.trim()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
+                className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-primary text-background transition-colors hover:bg-primary-hover disabled:opacity-40"
               >
                 <Plus size={16} />
               </button>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                   ? "bg-success-light text-success"
                   : testResult === "error"
                     ? "bg-danger-light text-danger"
-                    : "bg-primary text-white hover:bg-primary-hover"
+                    : "bg-primary text-background hover:bg-primary-hover"
               }`}
             >
               {testing ? (
@@ -435,7 +435,7 @@ export default function SettingsPage() {
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               settings.activeProvider === activeTab
                 ? "bg-success-light text-success"
-                : "bg-primary text-white hover:bg-primary-hover"
+                : "bg-primary text-background hover:bg-primary-hover"
             }`}
           >
             {settings.activeProvider === activeTab ? "✓ Active" : "Set Active"}
@@ -607,7 +607,7 @@ export default function SettingsPage() {
                       ? "bg-success-light text-success"
                       : slackTestResult.status === "error"
                         ? "bg-danger-light text-danger"
-                        : "bg-primary text-white hover:bg-primary-hover"
+                        : "bg-primary text-background hover:bg-primary-hover"
                   }`}
                 >
                   {slackTesting ? (

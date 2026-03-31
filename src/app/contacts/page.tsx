@@ -275,7 +275,7 @@ export default function ContactsPage() {
                         </select>
                         <button
                           onClick={() => saveEdit(c)}
-                          className="rounded-md bg-primary p-1 text-white"
+                          className="rounded-md bg-primary p-1 text-background"
                         >
                           <Check size={12} />
                         </button>

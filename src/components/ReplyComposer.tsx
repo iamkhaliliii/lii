@@ -120,7 +120,7 @@ export default function ReplyComposer({
               {/* Click to use as draft */}
               <button
                 onClick={() => handleUseSuggestion(s.english)}
-                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-muted transition-colors hover:bg-primary hover:text-white"
+                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-muted transition-colors hover:bg-primary hover:text-background"
                 title="Edit this reply"
               >
                 <PenLine size={10} />
@@ -170,7 +170,7 @@ export default function ReplyComposer({
       {result && (
         <div className="animate-slide-up rounded-lg border border-primary/25 bg-primary-light p-2.5">
           <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-background">
               <ArrowUpRight size={10} />
             </span>
             <div className="min-w-0 flex-1">
@@ -247,7 +247,7 @@ export default function ReplyComposer({
             <button
               onClick={handleSubmit}
               disabled={!draft.trim() || loading}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+              className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-background transition-colors hover:bg-primary-hover disabled:opacity-30"
             >
               {loading ? (
                 <Loader2 size={11} className="animate-spin" />

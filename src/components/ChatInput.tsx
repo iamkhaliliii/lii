@@ -287,7 +287,7 @@ export default function ChatInput({
         <button
           onClick={handleSend}
           disabled={!hasContent || sending}
-          className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+          className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-background transition-colors hover:bg-primary-hover disabled:opacity-30"
           title={`${isReplyMode ? "Polish & send" : "Translate"} (⌘↵)`}
         >
           {sending ? (

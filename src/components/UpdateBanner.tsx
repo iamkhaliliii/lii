@@ -48,7 +48,7 @@ export default function UpdateBanner() {
         ) : (
           <button
             onClick={handleInstall}
-            className="flex items-center gap-1 rounded bg-primary px-3 py-1 text-white hover:bg-primary-hover"
+            className="flex items-center gap-1 rounded bg-primary px-3 py-1 text-background hover:bg-primary-hover"
           >
             <Download size={14} />
             Update

@@ -118,7 +118,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                   />
                   <button
                     type="submit"
-                    className="rounded-lg bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary-hover"
+                    className="rounded-lg bg-primary px-3 py-1.5 text-sm text-background hover:bg-primary-hover"
                   >
                     Go
                   </button>
