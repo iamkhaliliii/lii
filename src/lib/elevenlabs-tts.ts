@@ -46,8 +46,6 @@ export function clampTtsSpeed(n: number): number {
 function useNextProxy(): boolean {
   if (typeof window === "undefined") return false;
   if (isTauri()) return false;
-  if (process.env.NODE_ENV === "development") return true;
-  if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") return false;
   return true;
 }
 

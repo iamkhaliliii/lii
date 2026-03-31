@@ -89,11 +89,7 @@ export async function initTauriSettings(): Promise<void> {
 
 // ─── Runtime mode detection ───────────────────────────────────
 function isWebMode(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    !isTauri() &&
-    process.env.NEXT_PUBLIC_STATIC_EXPORT !== "true"
-  );
+  return typeof window !== "undefined" && !isTauri();
 }
 
 // ─── localStorage functions ───────────────────────────────────
