@@ -18,6 +18,7 @@ import {
   Users,
   ChevronDown,
   ArrowUpRight,
+  ArrowLeft,
   Pin,
   PinOff,
   MessageSquare,
@@ -116,6 +117,7 @@ export default function SlackPage() {
     loadingThread,
     loadConversations,
     selectChannel,
+    clearActiveChannel,
     sendMessage,
     resolveUserName,
     togglePin,
@@ -317,8 +319,13 @@ export default function SlackPage() {
       <Navbar />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel — Conversation list */}
-        <div className="flex h-full w-72 shrink-0 flex-col border-r border-border-subtle bg-card">
+        {/* Left panel — Conversation list (full width on mobile, sidebar on desktop) */}
+        <div className={cn(
+          "h-full flex-col border-r border-border-subtle bg-card",
+          activeChannelId
+            ? "hidden md:flex md:w-72 md:shrink-0"
+            : "flex w-full md:w-72 md:shrink-0"
+        )}>
           {/* Search */}
           <div className="border-b border-border-subtle px-3 py-2.5">
             <div className="relative">
@@ -502,12 +509,21 @@ export default function SlackPage() {
           </div>
         </div>
 
-        {/* Right panel — Messages */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Right panel — Messages (full width on mobile when active, always visible on desktop) */}
+        <div className={cn(
+          "flex-1 flex-col overflow-hidden",
+          activeChannelId ? "flex" : "hidden md:flex"
+        )}>
           {activeConv ? (
             <>
               {/* Header */}
-              <div className="flex items-center gap-3 border-b border-border-subtle bg-card/50 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2 border-b border-border-subtle bg-card/50 px-3 py-3 backdrop-blur-sm md:gap-3 md:px-4">
+                <button
+                  onClick={clearActiveChannel}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                >
+                  <ArrowLeft size={18} />
+                </button>
                 {activeConv.type === "mpim" && activeConv.memberAvatars && activeConv.memberAvatars.length > 1 ? (
                   <AvatarStack urls={activeConv.memberAvatars} size={32} />
                 ) : activeConv.avatarUrl ? (
@@ -540,7 +556,7 @@ export default function SlackPage() {
                 onScroll={handleScroll}
                 className="relative flex-1 overflow-y-auto bg-background chat-scroll"
               >
-                <div className="mx-auto max-w-3xl px-4 py-4">
+                <div className="mx-auto max-w-3xl px-2 py-3 md:px-4 md:py-4">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 size={20} className="animate-spin text-muted" />
@@ -764,8 +780,8 @@ export default function SlackPage() {
                             </div>
 
                             <div className={cn(
-                              "absolute -top-3 right-2 flex gap-0.5 rounded-lg border border-border-subtle bg-card px-1 py-0.5 shadow-sm opacity-0 transition-opacity z-10",
-                              translations[msg.ts] ? "opacity-100" : "group-hover:opacity-100"
+                              "absolute -top-3 right-2 flex gap-0.5 rounded-lg border border-border-subtle bg-card px-1 py-0.5 shadow-sm transition-opacity z-10",
+                              translations[msg.ts] ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
                             )}>
                               <button
                                 onClick={() => handleTranslate(msg)}
@@ -980,7 +996,7 @@ export default function SlackPage() {
               </main>
 
               {/* Quick reply input */}
-              <div className="border-t border-border-subtle bg-background px-4 py-2.5">
+              <div className="border-t border-border-subtle bg-background px-3 py-2 md:px-4 md:py-2.5">
                 <div className="flex items-end gap-2">
                   <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/10">
                     <textarea

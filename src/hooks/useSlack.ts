@@ -137,6 +137,12 @@ export function useSlack() {
     [loadMessages]
   );
 
+  const clearActiveChannel = useCallback(() => {
+    setActiveChannelId(null);
+    setMessages([]);
+    setThreadReplies({});
+  }, []);
+
   const sendMessage = useCallback(
     async (channelId: string, text: string, threadTs?: string) => {
       if (!token) return;
@@ -221,6 +227,7 @@ export function useSlack() {
     loadConversations,
     loadMessages,
     selectChannel,
+    clearActiveChannel,
     sendMessage,
     resolveUserName,
     togglePin,

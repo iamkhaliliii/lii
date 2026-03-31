@@ -49,6 +49,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${vazirmatn.variable} antialiased flex flex-col h-screen overflow-hidden`}
       >
         <ToastProvider>
