@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui-tauri/main/src-tauri/gen/schemas/desktop-schema.json",
   "productName": "lii",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "identifier": "com.lii.app",
   "build": {
     "beforeDevCommand": "NEXT_PUBLIC_STATIC_EXPORT=true npm run dev",
-    "devUrl": "http://localhost:3000",
+    "devUrl": "http://localhost:4000",
     "beforeBuildCommand": "NEXT_PUBLIC_STATIC_EXPORT=true node scripts/tauri-build.js",
     "frontendDist": "../out"
   },

@@ -37,6 +37,13 @@ export interface BilingualSuggestion {
   farsi: string;
 }
 
+export interface TranslationRule {
+  id: string;
+  text: string;
+  enabled: boolean;
+  createdAt: number;
+}
+
 export interface TranslationResult {
   id: string;
   originalText: string;
@@ -84,30 +91,6 @@ export interface SlackConversation {
   pinned?: boolean;
 }
 
-export interface SlackFile {
-  id: string;
-  name: string;
-  mimetype: string;
-  filetype: string;
-  size?: number;
-}
-
-export interface SlackReaction {
-  name: string;
-  count: number;
-  users: string[];
-}
-
-export interface SlackAttachment {
-  title?: string;
-  titleLink?: string;
-  text?: string;
-  pretext?: string;
-  fromUrl?: string;
-  serviceName?: string;
-  color?: string;
-}
-
 export interface SlackMessage {
   ts: string;
   userId: string;
@@ -118,9 +101,6 @@ export interface SlackMessage {
   threadTs?: string;
   isThread?: boolean;
   replyCount?: number;
-  files?: SlackFile[];
-  reactions?: SlackReaction[];
-  attachments?: SlackAttachment[];
 }
 
 export interface SlackUser {
@@ -132,12 +112,8 @@ export interface SlackUser {
   isBot?: boolean;
 }
 
-export interface TranslationRule {
-  id: string;
-  text: string;
-  enabled: boolean;
-  createdAt: number;
-}
+export type TtsAccent = "us" | "gb";
+export type TtsEngine = "elevenlabs" | "browser";
 
 export interface AppSettings {
   providers: Record<AIProvider, ProviderConfig>;
@@ -147,6 +123,18 @@ export interface AppSettings {
   autoSuggestResponse: boolean;
   theme: "light" | "dark" | "system";
   slack?: SlackConfig;
+  /** ElevenLabs API key for selection TTS — store only in Settings / local secure storage. */
+  elevenLabsApiKey?: string;
+  /** Selection popover: American vs British-style voice. */
+  ttsAccent?: TtsAccent;
+  /** Selection popover: cloud vs free browser speech. */
+  ttsEngine?: TtsEngine;
+  /** ElevenLabs voice ID for American accent (empty = built-in default). */
+  ttsElevenLabsVoiceUs?: string;
+  /** ElevenLabs voice ID for British accent (empty = built-in default). */
+  ttsElevenLabsVoiceGb?: string;
+  /** ElevenLabs playback speed (0.7–1.3). */
+  ttsElevenLabsSpeed?: number;
   rules?: TranslationRule[];
 }
 

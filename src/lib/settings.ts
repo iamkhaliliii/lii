@@ -16,6 +16,13 @@ const defaultSettings: AppSettings = {
   autoSuggestResponse: true,
   theme: "system",
   slack: { token: "", connected: false },
+  elevenLabsApiKey: "",
+  ttsAccent: "us",
+  ttsEngine: "elevenlabs",
+  ttsElevenLabsVoiceUs: "",
+  ttsElevenLabsVoiceGb: "",
+  ttsElevenLabsSpeed: 1,
+  rules: [],
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,7 +1,12 @@
 export async function checkForAppUpdates() {
   // Only run in Tauri context
   if (typeof window === "undefined" || !("__TAURI__" in window)) {
-    console.log("[updater] Not in Tauri context, skipping");
+    return null;
+  }
+
+  // During `tauri dev` / Next dev, hitting GitHub often fails (TLS, proxies, or dev quirks)
+  // and spams the console — production desktop builds use NODE_ENV=production.
+  if (process.env.NODE_ENV === "development") {
     return null;
   }
 
@@ -54,7 +59,14 @@ export async function checkForAppUpdates() {
       },
     };
   } catch (e) {
-    console.error("Update check failed:", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    // Network / GitHub unreachable — don't treat as app failure; banner stays hidden
+    console.warn(
+      "[updater] Update check skipped:",
+      msg.includes("github.com") || msg.includes("sending request")
+        ? "could not reach update manifest (offline, firewall, or regional network)."
+        : msg
+    );
     return null;
   }
 }

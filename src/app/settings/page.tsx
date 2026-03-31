@@ -17,6 +17,7 @@ import {
   Trash2,
   BookOpen,
   Pencil,
+  Volume2,
 } from "lucide-react";
 import { TranslationRule } from "@/types";
 import { translateDirect } from "@/lib/ai/client-direct";
@@ -217,6 +218,8 @@ export default function SettingsPage() {
     null
   );
   const toast = useToast();
+
+  const [showElevenKey, setShowElevenKey] = useState(false);
 
   // Slack state
   const [showSlackToken, setShowSlackToken] = useState(false);
@@ -480,6 +483,46 @@ export default function SettingsPage() {
         <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
           Integrations
         </p>
+
+        {/* ElevenLabs — selection TTS */}
+        <div className="mb-6 rounded-lg border border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+            <Volume2 size={16} className="text-muted" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">ElevenLabs</p>
+              <p className="text-xs text-muted">
+                Optional API key for high-quality English TTS when you select text (American / British
+                voices in the popover).
+              </p>
+            </div>
+          </div>
+          <div className="px-4 py-3">
+            <label className="mb-1 block text-xs font-medium text-muted">API key</label>
+            <div className="relative">
+              <input
+                type={showElevenKey ? "text" : "password"}
+                value={settings.elevenLabsApiKey || ""}
+                onChange={(e) => updateSettings({ elevenLabsApiKey: e.target.value })}
+                placeholder="xi-api-key or sk_… from ElevenLabs"
+                dir="ltr"
+                autoComplete="off"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-10 text-sm font-mono focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowElevenKey(!showElevenKey)}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted hover:text-foreground"
+              >
+                {showElevenKey ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted/80">
+              Key is stored on this device only. Never commit it to git. For web (non-Tauri), audio is
+              proxied through this app&apos;s server; use HTTPS in production.
+            </p>
+          </div>
+        </div>
+
         <div className="mb-8 rounded-lg border border-border bg-card">
           <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
             <Hash size={16} className="text-muted" />
