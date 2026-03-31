@@ -1,83 +1,79 @@
-/** Rich template — matches proposed FluentFlows / Learning Hack schema */
+/* ─── Curriculum types ─── */
 
-export type TemplateTone =
-  | "formal"
-  | "collaborative"
-  | "assertive"
-  | "casual"
-  | "strategic";
+export type CardType = "sentence" | "idiom" | "vocab" | "verb_upgrade" | "pattern";
 
-export type TemplateMetadata = {
-  tone?: TemplateTone | TemplateTone[];
-  meeting_type?: string[];
-  use_case?: string;
-  /** Optional slug for future TTS / pronunciation hooks */
-  audio_slug?: string;
-};
-
-export type VariableMap = Record<string, string[]>;
-
-export type HackTemplate = {
-  id: string;
-  pattern_en: string;
-  pattern_fa: string;
-  variables: VariableMap;
-  metadata?: TemplateMetadata;
-};
-
-export type HackCategory = {
-  id: string;
-  title_en: string;
-  title_fa: string;
-  source?: string;
-  templates: HackTemplate[];
-};
-
-/** Fixed bilingual line (50 design-review openers, closers, etc.) */
-export type DesignPhrase = {
-  id: string;
-  section_id: DesignReviewSectionId;
-  en: string;
-  fa: string;
-  metadata?: TemplateMetadata;
-};
-
-export type DesignReviewSectionId =
-  | "opening_context"
-  | "presenting_design"
-  | "defending_why"
-  | "handling_pushback"
-  | "talking_to_devs"
-  | "closing_next_steps";
-
-export type DesignReviewSection = {
-  id: DesignReviewSectionId;
-  title_en: string;
-  title_fa: string;
-};
-
-export type GlossaryEntry = {
-  id: string;
-  pack_id: string;
-  term: string;
-  definition_en: string;
-  definition_fa: string;
-  example_en?: string;
-};
-
-export type PowerVerbRow = {
-  id: string;
-  category_en: string;
-  category_fa: string;
-  weak: string;
-  strong: string;
-  note_fa?: string;
-};
-
-export type SimplePhrase = {
+export type LearningCard = {
   id: string;
   en: string;
   fa: string;
-  tags?: string[];
-  metadata?: TemplateMetadata;
+  highlight_en?: string;
+  context: string;
+  unit: number;
+  level: 1 | 2 | 3 | 4;
+  type: CardType;
+  grammar_note?: string;
+  tip_fa?: string;
+};
+
+export type LearningUnit = {
+  id: number;
+  level: 1 | 2 | 3 | 4;
+  title_en: string;
+  title_fa: string;
+  description: string;
+  cards: LearningCard[];
+};
+
+export type LearningLevel = {
+  level: 1 | 2 | 3 | 4;
+  title_en: string;
+  title_fa: string;
+  units: LearningUnit[];
+};
+
+/* ─── SRS types ─── */
+
+export type LeitnerBox = 1 | 2 | 3 | 4 | 5;
+
+export type SRSRecord = {
+  itemId: string;
+  cardType: CardType;
+  box: LeitnerBox;
+  lastReviewed: number;
+  nextReview: number;
+  correctCount: number;
+  incorrectCount: number;
+  bookmarked: boolean;
+};
+
+export type SRSRating = "again" | "hard" | "good" | "easy";
+
+export type DailyLog = {
+  date: string;
+  cardsReviewed: number;
+  correctCount: number;
+  incorrectCount: number;
+};
+
+export type QuizQuestionType = "multiple_choice" | "fill_blank" | "verb_match";
+
+export type QuizQuestion = {
+  id: string;
+  type: QuizQuestionType;
+  prompt: string;
+  promptLang: "en" | "fa";
+  correctAnswer: string;
+  options: string[];
+  sourceItemId: string;
+};
+
+export type UserProgress = {
+  totalItems: number;
+  masteredCount: number;
+  learningCount: number;
+  newCount: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastPracticeDate: string | null;
+  levelBreakdown: Record<number, { total: number; mastered: number; learning: number }>;
 };

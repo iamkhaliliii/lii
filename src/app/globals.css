@@ -139,6 +139,15 @@ textarea {
 }
 
 /* ============================
+   Flashcard 3D flip
+   ============================ */
+
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* ============================
    Animations — subtle & fast
    ============================ */
 
