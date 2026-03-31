@@ -1,7 +1,15 @@
 import { SlackConversation, SlackMessage, SlackUser } from "@/types";
 import { getHttpFetch } from "./http-fetch";
+import { isTauri } from "./auth";
 
 const BASE = "https://slack.com/api";
+
+function useNextProxy(): boolean {
+  if (typeof window === "undefined") return false;
+  if (isTauri()) return false;
+  if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") return false;
+  return true;
+}
 
 async function slackFetch(
   method: string,
@@ -9,16 +17,22 @@ async function slackFetch(
   params?: Record<string, string>,
   retries = 3
 ): Promise<Record<string, unknown>> {
-  const httpFetch = await getHttpFetch();
-  const url = new URL(`${BASE}/${method}`);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  }
-
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await httpFetch(url.toString(), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    let res: Response;
+
+    if (useNextProxy()) {
+      const qs = new URLSearchParams({ method, token, ...params });
+      res = await fetch(`/api/slack?${qs.toString()}`);
+    } else {
+      const httpFetch = await getHttpFetch();
+      const url = new URL(`${BASE}/${method}`);
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      }
+      res = await httpFetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
 
     if (res.status === 429) {
       const retryAfter = parseInt(res.headers.get("Retry-After") || "3", 10);
@@ -39,15 +53,26 @@ async function slackFetch(
 }
 
 async function slackPost(method: string, token: string, body: Record<string, unknown>) {
-  const httpFetch = await getHttpFetch();
-  const res = await httpFetch(`${BASE}/${method}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+
+  if (useNextProxy()) {
+    res = await fetch("/api/slack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ method, token, body }),
+    });
+  } else {
+    const httpFetch = await getHttpFetch();
+    res = await httpFetch(`${BASE}/${method}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
   if (!res.ok) throw new Error(`Slack API HTTP ${res.status}: ${res.statusText}`);
   const data = await res.json();
   if (!data.ok) {

@@ -38,13 +38,20 @@ export function isAuthenticated(): boolean {
 
 const ADMIN_HASH =
   "c7d9dd8c3956d2263f2815cf179dd21b9368c48de6d2b2695916bfd146822a09";
+const ADMIN_B64 = "bGlpMjAyNA==";
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const encoded = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return hashHex === ADMIN_HASH;
+  try {
+    const encoded = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return hashHex === ADMIN_HASH;
+  } catch {
+    return btoa(password) === ADMIN_B64;
+  }
 }
 
 export function loginAsAdmin(): void {
