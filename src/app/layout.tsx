@@ -7,6 +7,7 @@ import AuthGate from "@/components/AuthGate";
 import SelectionSpeechToolbar from "@/components/SelectionSpeechToolbar";
 import { ToastProvider } from "@/components/Toast";
 import PwaRegistration from "@/components/PwaRegistration";
+import ThemeProvider, { themeInitScript } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0b",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -44,8 +49,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" dir="ltr">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
@@ -53,12 +59,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${vazirmatn.variable} antialiased flex flex-col h-screen overflow-hidden`}
       >
         <ToastProvider>
-          <PwaRegistration />
-          <SelectionSpeechToolbar />
-          <AuthGate>
-            <UpdateBanner />
-            {children}
-          </AuthGate>
+          <ThemeProvider>
+            <PwaRegistration />
+            <SelectionSpeechToolbar />
+            <AuthGate>
+              <UpdateBanner />
+              {children}
+            </AuthGate>
+          </ThemeProvider>
         </ToastProvider>
       </body>
     </html>

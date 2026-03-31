@@ -288,22 +288,23 @@ export default function SlackPage() {
     return (
       <div className="flex h-full flex-col bg-background">
         <Navbar />
-        <div className="flex flex-1 flex-col items-center justify-center text-center px-6">
+        <div className="flex flex-1 flex-col items-center justify-center text-center px-6 page-scroll">
           <div className="animate-fade-in flex flex-col items-center">
-            <div className="relative mb-6 inline-block">
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-accent to-surface-hover">
-                <Hash size={32} className="text-primary/60" />
+            <div className="relative mb-5 inline-block md:mb-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover md:h-20 md:w-20 md:rounded-3xl">
+                <Hash size={28} className="text-primary/60 md:hidden" />
+                <Hash size={32} className="text-primary/60 hidden md:block" />
               </div>
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-foreground">
+            <h3 className="mb-2 text-base font-semibold text-foreground md:text-lg">
               Connect Slack
             </h3>
-            <p className="mb-6 max-w-[300px] text-sm text-muted">
+            <p className="mb-5 max-w-[280px] text-[13px] text-muted md:mb-6 md:max-w-[300px] md:text-sm">
               Add your Slack OAuth token in Settings to browse DMs and channels directly in lii.
             </p>
             <button
               onClick={() => router.push("/settings")}
-              className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md active:scale-[0.98]"
+              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md press"
             >
               <Settings size={16} />
               Go to Settings
@@ -318,7 +319,7 @@ export default function SlackPage() {
     <div className="flex h-full flex-col bg-background">
       <Navbar />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
         {/* Left panel — Conversation list (full width on mobile, sidebar on desktop) */}
         <div className={cn(
           "h-full flex-col border-r border-border-subtle bg-card",

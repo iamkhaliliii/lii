@@ -67,27 +67,26 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Quick actions */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2.5 md:gap-3">
         <button
           type="button"
           onClick={onStartFlashcards}
-          className="group flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition-all hover:border-primary/30 hover:shadow-sm active:scale-[0.99]"
+          className="group flex flex-col items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-row md:items-center md:gap-4 md:p-5"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/8 transition-colors group-hover:bg-primary/15">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/8 transition-colors group-hover:bg-primary/15 md:h-11 md:w-11">
             <Zap size={18} className="text-primary/70" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">Flashcards</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="text-[13px] font-semibold text-foreground md:text-sm">Flashcards</p>
+            <p className="mt-0.5 text-[11px] text-muted md:text-xs">
               {dueCount > 0 ? (
                 <>
-                  <span className="font-semibold text-warning">{dueCount}</span> cards due
-                  for review
+                  <span className="font-semibold text-warning">{dueCount}</span> due
                 </>
               ) : (
-                "Practice with flip cards"
+                "Practice cards"
               )}
             </p>
           </div>
@@ -95,22 +94,22 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
         <button
           type="button"
           onClick={onStartQuiz}
-          className="group flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left transition-all hover:border-primary/30 hover:shadow-sm active:scale-[0.99]"
+          className="group flex flex-col items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-row md:items-center md:gap-4 md:p-5"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success/10 transition-colors group-hover:bg-success/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/10 transition-colors group-hover:bg-success/20 md:h-11 md:w-11">
             <Sparkles size={18} className="text-success" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">Quiz</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Test your knowledge with exercises
+            <p className="text-[13px] font-semibold text-foreground md:text-sm">Quiz</p>
+            <p className="mt-0.5 text-[11px] text-muted md:text-xs">
+              Test your knowledge
             </p>
           </div>
         </button>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
         <StatCard
           icon={<Flame size={16} className="text-warning" />}
           label="Streak"
@@ -133,14 +132,14 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
           icon={<Clock size={16} className="text-muted" />}
           label="Today"
           value={String(todayLog?.cardsReviewed ?? 0)}
-          sub={todayLog && todayLog.cardsReviewed > 0 ? `${todayAccuracy}% accurate` : undefined}
+          sub={todayLog && todayLog.cardsReviewed > 0 ? `${todayAccuracy}% acc` : undefined}
         />
       </div>
 
       {/* Level progress */}
-      <div className="rounded-2xl border border-border/60 bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold text-foreground">Level Progress</h3>
-        <div className="space-y-4">
+      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+        <h3 className="mb-3 text-[13px] font-semibold text-foreground md:mb-4 md:text-sm">Level Progress</h3>
+        <div className="space-y-3.5 md:space-y-4">
           {LEVELS.map((lvl) => {
             const levelCards = lvl.units.reduce((acc, u) => acc + u.cards.length, 0);
             const bd = progress.levelBreakdown[lvl.level];
@@ -151,7 +150,7 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
             return (
               <div key={lvl.level}>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     <span className={cn(
                       "flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold",
                       lvl.level === 1 && "bg-blue-500/10 text-blue-500",
@@ -162,11 +161,11 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
                       {lvl.level}
                     </span>
                     <span className="text-xs font-medium text-foreground/80">{lvl.title_en}</span>
-                    <span className="text-[10px] text-muted/50" dir="rtl">{lvl.title_fa}</span>
+                    <span className="hidden text-[10px] text-muted/50 md:inline" dir="rtl">{lvl.title_fa}</span>
                   </div>
                   <span className="text-[10px] tabular-nums text-muted">
                     {masteredInLevel}/{levelCards}
-                    {learningInLevel > 0 && <span className="text-primary/50"> · {learningInLevel} learning</span>}
+                    {learningInLevel > 0 && <span className="hidden text-primary/50 md:inline"> · {learningInLevel} learning</span>}
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-accent">
@@ -190,8 +189,8 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-2xl border border-border/60 bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold text-foreground">
+      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+        <h3 className="mb-3 text-[13px] font-semibold text-foreground md:mb-4 md:text-sm">
           Last 30 Days
         </h3>
         <HeatmapGrid logs={logs} />
@@ -216,15 +215,15 @@ function StatCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="rounded-2xl border border-border/60 bg-card p-4"
+      className="rounded-2xl border border-border/60 bg-card p-3 md:p-4"
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center gap-1.5 md:mb-2 md:gap-2">
         {icon}
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted md:text-[11px]">
           {label}
         </span>
       </div>
-      <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
+      <p className="text-lg font-bold tabular-nums text-foreground md:text-xl">{value}</p>
       {sub && <p className="mt-0.5 text-[10px] text-muted/60">{sub}</p>}
     </motion.div>
   );
@@ -250,7 +249,7 @@ function HeatmapGrid({ logs }: { logs: DailyLog[] }) {
   const maxCount = Math.max(1, ...days.map((d) => d.count));
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-[3px] md:gap-1">
       {days.map((d) => {
         const intensity = d.count / maxCount;
         return (
@@ -258,7 +257,7 @@ function HeatmapGrid({ logs }: { logs: DailyLog[] }) {
             key={d.date}
             title={`${d.date}: ${d.count} cards`}
             className={cn(
-              "h-4 w-4 rounded-[3px] transition-colors",
+              "h-3.5 w-3.5 rounded-[3px] transition-colors md:h-4 md:w-4",
               d.count === 0 ? "bg-accent" : ""
             )}
             style={

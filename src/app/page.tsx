@@ -530,24 +530,25 @@ export default function TranslatePage() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Results area */}
-        <main className="flex-1 overflow-y-auto chat-scroll">
-          <div className="mx-auto max-w-2xl px-4 py-5">
+        <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
+          <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-5">
             {/* Empty state */}
             {!hasResults && !translating && (
-              <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover">
-                  <Languages size={28} className="text-primary/50" />
+              <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in md:py-20">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover md:mb-5 md:h-16 md:w-16">
+                  <Languages size={24} className="text-primary/50 md:hidden" />
+                  <Languages size={28} className="text-primary/50 hidden md:block" />
                 </div>
-                <h2 className="text-lg font-semibold text-foreground/80 mb-1.5">Translate</h2>
-                <p className="max-w-[280px] text-sm text-muted/50 leading-relaxed">
-                  Paste text or screenshots in any language — English↔Farsi translation, tone analysis, and reply suggestions
+                <h2 className="text-base font-semibold text-foreground/80 mb-1 md:text-lg md:mb-1.5">Translate</h2>
+                <p className="max-w-[280px] text-[13px] text-muted/50 leading-relaxed md:text-sm">
+                  Paste text or screenshots — English↔Farsi translation, tone analysis, and reply suggestions
                 </p>
-                <div className="mt-5 flex items-center gap-3 text-[10px] text-muted/30">
-                  <span className="flex items-center gap-1">
+                <div className="mt-4 flex items-center gap-3 text-[10px] text-muted/30 md:mt-5">
+                  <span className="hidden items-center gap-1 md:flex">
                     <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">⌘V</kbd>
                     paste text
                   </span>
-                  <span className="h-3 w-px bg-border-subtle" />
+                  <span className="hidden h-3 w-px bg-border-subtle md:block" />
                   <span className="flex items-center gap-1">
                     <ImagePlus size={10} />
                     drop image
@@ -595,7 +596,7 @@ export default function TranslatePage() {
         </main>
 
         {/* Input area */}
-        <div className="border-t border-border-subtle bg-background px-4 py-3">
+        <div className="border-t border-border-subtle bg-background px-3 py-2 md:px-4 md:py-3 mb-[var(--bottom-nav-h)] md:mb-0" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}>
           {/* Drop overlay */}
           {dragging && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
@@ -616,13 +617,14 @@ export default function TranslatePage() {
                     <img
                       src={img}
                       alt={`Image ${i + 1}`}
-                      className="h-12 w-12 rounded-lg border border-border object-cover"
+                      className="h-11 w-11 rounded-lg border border-border object-cover md:h-12 md:w-12"
                     />
                     <button
                       onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white transition-opacity md:h-4 md:w-4"
                     >
-                      <X size={8} />
+                      <X size={10} className="md:hidden" />
+                      <X size={8} className="hidden md:block" />
                     </button>
                   </div>
                 ))}
@@ -646,28 +648,28 @@ export default function TranslatePage() {
             )}
 
             {/* Input row */}
-            <div className="flex items-end gap-2">
-              <div className="mb-1 flex shrink-0 flex-col gap-1">
+            <div className="flex items-end gap-1.5 md:gap-2">
+              <div className="mb-0.5 flex shrink-0 flex-col gap-1 md:mb-1">
                 <button
                   onClick={() => setIsReplyMode(!isReplyMode)}
                   className={cn(
-                    "shrink-0 rounded-lg p-2 transition-colors",
+                    "shrink-0 rounded-lg p-2.5 transition-colors press md:p-2",
                     isReplyMode
                       ? "bg-primary-muted text-primary"
                       : "text-muted hover:bg-accent hover:text-foreground"
                   )}
                   title={isReplyMode ? "Switch to translate" : "Switch to reply"}
                 >
-                  {isReplyMode ? <ArrowUpRight size={16} /> : <Languages size={16} />}
+                  {isReplyMode ? <ArrowUpRight size={18} /> : <Languages size={18} />}
                 </button>
               </div>
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="mb-1 shrink-0 rounded-lg p-2 text-muted hover:bg-accent hover:text-foreground transition-colors"
+                className="mb-0.5 shrink-0 rounded-lg p-2.5 text-muted hover:bg-accent hover:text-foreground transition-colors press md:mb-1 md:p-2"
                 title="Upload image"
               >
-                <ImagePlus size={16} />
+                <ImagePlus size={18} />
               </button>
               <input
                 ref={fileInputRef}
@@ -708,7 +710,7 @@ export default function TranslatePage() {
               <button
                 onClick={handleSend}
                 disabled={!hasContent || translating}
-                className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-30"
+                className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-all hover:bg-primary-hover disabled:opacity-30 press md:mb-1 md:h-9 md:w-9"
                 title={`${isReplyMode ? "Polish reply" : "Translate"} (⌘↵)`}
               >
                 {translating ? (
@@ -723,7 +725,7 @@ export default function TranslatePage() {
 
             {/* Bottom bar */}
             <div className="mt-1.5 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[10px] text-muted/40">
+              <div className="hidden items-center gap-1.5 text-[10px] text-muted/40 md:flex">
                 <kbd className="rounded border border-border-subtle px-1 py-0.5 font-mono text-[9px]">↵</kbd>
                 <span>{isReplyMode ? "polish" : "translate"}</span>
                 <span className="text-muted/20">·</span>

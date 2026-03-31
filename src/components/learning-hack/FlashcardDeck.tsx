@@ -8,7 +8,7 @@ import {
   ArrowLeftRight,
   Layers,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, haptic, hapticSuccess } from "@/lib/utils";
 import type { SRSRating, LearningCard } from "@/types/learning-hack";
 import FlashcardCard from "./FlashcardCard";
 import { rateCard, getDueCards } from "@/lib/learning-hack-srs";
@@ -73,6 +73,7 @@ export default function FlashcardDeck() {
   const handleRate = useCallback(
     async (rating: SRSRating) => {
       if (!currentCard) return;
+      haptic();
       try {
         await rateCard(currentCard.id, currentCard.type, rating);
       } catch (err) {
@@ -82,6 +83,7 @@ export default function FlashcardDeck() {
       setSessionCount((c) => c + 1);
 
       if (currentIdx + 1 >= deck.length) {
+        hapticSuccess();
         setSessionDone(true);
       } else {
         setTimeout(() => setCurrentIdx((i) => i + 1), 150);
@@ -143,10 +145,10 @@ export default function FlashcardDeck() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 md:space-y-5">
       {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
           {LEVEL_FILTERS.map((f) => (
             <button
               key={f.id}
@@ -159,7 +161,7 @@ export default function FlashcardDeck() {
                 setSessionDone(false);
               }}
               className={cn(
-                "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors press",
                 levelFilter === f.id
                   ? "bg-primary text-background"
                   : "bg-accent text-muted hover:text-foreground"
@@ -178,7 +180,7 @@ export default function FlashcardDeck() {
                 setFlipped(false);
                 setSessionDone(false);
               }}
-              className="rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground"
+              className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground"
             >
               <option value={0}>All units</option>
               {availableUnits.map((u) => (
@@ -193,7 +195,7 @@ export default function FlashcardDeck() {
         <button
           type="button"
           onClick={() => setDirection((d) => (d === "en_to_fa" ? "fa_to_en" : "en_to_fa"))}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground press"
         >
           <ArrowLeftRight size={12} />
           {direction === "en_to_fa" ? "EN → FA" : "FA → EN"}
@@ -242,7 +244,7 @@ export default function FlashcardDeck() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="flex justify-center gap-2"
+            className="flex justify-center gap-2 md:gap-2"
           >
             {RATING_BTNS.map((btn) => (
               <button
@@ -253,7 +255,7 @@ export default function FlashcardDeck() {
                   handleRate(btn.id);
                 }}
                 className={cn(
-                  "relative z-10 rounded-lg px-4 py-2 text-sm font-medium transition-all active:scale-95",
+                  "relative z-10 rounded-xl px-4 py-3 text-[13px] font-semibold transition-all press md:rounded-lg md:px-4 md:py-2 md:text-sm md:font-medium",
                   btn.cls
                 )}
               >
@@ -277,7 +279,7 @@ export default function FlashcardDeck() {
                 setCurrentIdx((i) => i + 1);
               }
             }}
-            className="inline-flex items-center gap-1.5 text-xs text-muted/60 transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs text-muted/60 transition-colors hover:text-foreground press"
           >
             Skip <ArrowRight size={12} />
           </button>

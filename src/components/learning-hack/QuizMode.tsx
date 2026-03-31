@@ -11,7 +11,7 @@ import {
   BookType,
   PenLine,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, haptic } from "@/lib/utils";
 import type { QuizQuestion } from "@/types/learning-hack";
 import {
   generateMultipleChoice,
@@ -60,6 +60,7 @@ export default function QuizMode() {
     async (option: string) => {
       if (selected) return;
       if (!current) return;
+      haptic();
       const correct = option === current.correctAnswer;
       setSelected(option);
       setShowResult(true);
@@ -251,7 +252,7 @@ export default function QuizMode() {
                     onClick={() => handleSelect(opt)}
                     disabled={!!selected}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-all active:scale-[0.98]",
+                      "flex items-center gap-3 rounded-xl border p-3.5 text-left text-[13px] transition-all press md:p-4 md:text-sm",
                       optCls
                     )}
                     dir={current.promptLang === "en" ? "rtl" : "ltr"}

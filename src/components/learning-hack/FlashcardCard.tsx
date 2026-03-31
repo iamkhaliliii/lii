@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import type { LearningCard } from "@/types/learning-hack";
-import { cn } from "@/lib/utils";
+import { cn, haptic } from "@/lib/utils";
 import TtsButton from "./TtsButton";
 import WordLookupPopup from "./WordLookupPopup";
 
@@ -56,6 +56,7 @@ export default function FlashcardCard({
     if (lookup) {
       setLookup(null);
     } else {
+      haptic();
       onFlip();
     }
   }, [lookup, onFlip]);
@@ -73,18 +74,18 @@ export default function FlashcardCard({
     <>
       <div
         className="perspective-[1200px] w-full cursor-pointer select-none"
-        style={{ minHeight: 300 }}
+        style={{ minHeight: 260 }}
         onClick={handleCardClick}
       >
         <motion.div
           className="relative w-full"
-          style={{ minHeight: 300, transformStyle: "preserve-3d" }}
+          style={{ minHeight: 260, transformStyle: "preserve-3d" }}
           animate={{ rotateY: flipped ? 180 : 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* ── Front ── */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card px-8 py-10 shadow-sm backface-hidden"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card px-5 py-8 shadow-sm backface-hidden md:px-8 md:py-10"
             dir={frontDir}
           >
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
@@ -127,7 +128,7 @@ export default function FlashcardCard({
 
           {/* ── Back ── */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card-elevated px-8 py-8 shadow-sm backface-hidden"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card-elevated px-5 py-6 shadow-sm backface-hidden md:px-8 md:py-8"
             style={{ transform: "rotateY(180deg)" }}
           >
             <div className="mb-3 flex items-center gap-2">

@@ -18,7 +18,11 @@ import {
   BookOpen,
   Pencil,
   Volume2,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { TranslationRule } from "@/types";
 import { translateDirect } from "@/lib/ai/client-direct";
 import { testSlackConnection } from "@/lib/slack";
@@ -310,10 +314,10 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full bg-background">
       <Navbar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+      <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
+        <div className="mx-auto max-w-3xl px-4 py-5 md:py-6">
         <h1 className="mb-1 text-lg font-bold">Settings</h1>
-        <p className="mb-6 text-sm text-muted">
+        <p className="mb-5 text-sm text-muted md:mb-6">
           Configure providers and preferences
         </p>
 
@@ -438,13 +442,47 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* Appearance */}
+        <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+          Appearance
+        </p>
+        <div className="mb-8 rounded-xl border border-border bg-card">
+          <div className="px-4 py-4">
+            <p className="mb-3 text-sm font-medium">Theme</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "light" as const, label: "Light", icon: Sun },
+                { id: "dark" as const, label: "Dark", icon: Moon },
+                { id: "system" as const, label: "System", icon: Monitor },
+              ]).map(({ id, label, icon: Icon }) => {
+                const active = (settings.theme || "system") === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => updateSettings({ theme: id })}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-xs font-medium transition-all press",
+                      active
+                        ? "border-primary bg-primary-muted text-primary"
+                        : "border-border-subtle bg-accent/40 text-muted hover:border-border hover:text-foreground"
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={active ? 2.2 : 1.5} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Preferences */}
         <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
           Preferences
         </p>
-        <div className="mb-8 divide-y divide-border-subtle rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <div>
+        <div className="mb-8 divide-y divide-border-subtle rounded-xl border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">Auto-detect tone</p>
               <p className="text-xs text-muted">
                 Analyze formality, sentiment, and context
@@ -459,8 +497,8 @@ export default function SettingsPage() {
               aria-checked={settings.autoDetectTone}
             />
           </div>
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <div>
+          <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">Auto-suggest replies</p>
               <p className="text-xs text-muted">
                 Generate bilingual reply suggestions
