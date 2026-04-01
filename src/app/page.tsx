@@ -530,16 +530,16 @@ export default function TranslatePage() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Results area */}
-        <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
-          <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-5">
+        <main className="flex-1 overflow-y-auto chat-scroll">
+          <div className="mx-auto max-w-2xl px-3 py-3 md:px-4 md:py-5">
             {/* Empty state */}
             {!hasResults && !translating && (
-              <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in md:py-20">
+              <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in md:py-20">
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-surface-hover md:mb-5 md:h-16 md:w-16">
                   <Languages size={24} className="text-primary/50 md:hidden" />
                   <Languages size={28} className="text-primary/50 hidden md:block" />
                 </div>
-                <h2 className="text-base font-semibold text-foreground/80 mb-1 md:text-lg md:mb-1.5">Translate</h2>
+                <h2 className="text-[15px] font-semibold text-foreground/80 mb-1 md:text-lg md:mb-1.5">Translate</h2>
                 <p className="max-w-[280px] text-[13px] text-muted/50 leading-relaxed md:text-sm">
                   Paste text or screenshots — English↔Farsi translation, tone analysis, and reply suggestions
                 </p>
@@ -596,7 +596,7 @@ export default function TranslatePage() {
         </main>
 
         {/* Input area */}
-        <div className="border-t border-border-subtle bg-background px-3 py-2 md:px-4 md:py-3 mb-[var(--bottom-nav-h)] md:mb-0" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}>
+        <div className="border-t border-border-subtle bg-background px-3 py-2 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom,0px)+0.5rem)] md:px-4 md:py-3 md:pb-3">
           {/* Drop overlay */}
           {dragging && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">

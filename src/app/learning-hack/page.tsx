@@ -35,14 +35,14 @@ export default function LearningHackPage() {
     <div className="flex h-full flex-col bg-background">
       <Navbar />
       <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
-        <div className="mx-auto max-w-3xl px-3 py-4 md:px-4 md:py-6">
+        <div className="mx-auto max-w-3xl px-3 py-3 md:px-4 md:py-6">
           {/* Header */}
-          <div className="mb-4 flex items-start gap-3 md:mb-6">
+          <div className="mb-3 flex items-start gap-3 md:mb-6">
             <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/8 md:flex">
               <Lightbulb size={15} className="text-primary/60" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base font-bold text-foreground md:text-lg">Learning Hack</h1>
+              <h1 className="text-[15px] font-bold text-foreground md:text-lg">Learning Hack</h1>
               <p className="mt-0.5 text-[13px] text-muted md:text-sm">
                 500 cards · 4 levels — professional English
               </p>
@@ -59,14 +59,14 @@ export default function LearningHackPage() {
                   type="button"
                   onClick={() => setMode(id)}
                   className={cn(
-                    "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium transition-all press md:px-3 md:py-2 md:text-sm",
+                    "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-[11px] font-medium transition-all press md:px-3 md:py-2 md:text-sm",
                     active
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted hover:text-foreground"
                   )}
                 >
-                  <Icon size={14} />
-                  <span className="hidden xs:inline sm:inline">{label}</span>
+                  <Icon size={15} />
+                  <span>{label}</span>
                 </button>
               );
             })}

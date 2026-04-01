@@ -139,8 +139,8 @@ export default function ContactsPage() {
       />
 
       <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
-        <div className="mx-auto max-w-3xl px-3 py-4 md:px-4 md:py-6">
-        <h1 className="mb-1 text-lg font-bold">Contacts</h1>
+        <div className="mx-auto max-w-3xl px-3 py-3 md:px-4 md:py-6">
+        <h1 className="mb-1 text-[15px] font-bold md:text-lg">Contacts</h1>
         <p className="mb-5 text-sm text-muted">
           Manage your contacts for personalized translations
         </p>

@@ -303,7 +303,7 @@ export default function TranscriptPage() {
       <Navbar />
 
       <div className="flex-1 overflow-y-auto chat-scroll page-scroll">
-        <div className="mx-auto max-w-3xl px-3 py-4 md:px-4 md:py-5">
+        <div className="mx-auto max-w-3xl px-3 py-3 md:px-4 md:py-5">
           {/* ─── Input section ─── */}
           {!result && !analyzing && (
             <div className="animate-fade-in space-y-4">

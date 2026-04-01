@@ -319,7 +319,7 @@ export default function SlackPage() {
     <div className="flex h-full flex-col bg-background">
       <Navbar />
 
-      <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
+      <div className="flex flex-1 overflow-hidden pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom,0px))] md:pb-0">
         {/* Left panel — Conversation list (full width on mobile, sidebar on desktop) */}
         <div className={cn(
           "h-full flex-col border-r border-border-subtle bg-card",
@@ -331,15 +331,15 @@ export default function SlackPage() {
           <div className="border-b border-border-subtle px-3 py-2.5">
             <div className="relative">
               <Search
-                size={13}
-                className="absolute top-1/2 left-2.5 -translate-y-1/2 text-muted/50"
+                size={14}
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-muted/50"
               />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search conversations…"
-                className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-3 text-xs placeholder-muted focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+                className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-[13px] placeholder-muted focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10 md:rounded-lg md:py-1.5 md:pl-8 md:text-xs"
               />
             </div>
           </div>

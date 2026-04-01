@@ -219,12 +219,12 @@ function StatCard({
     >
       <div className="mb-1.5 flex items-center gap-1.5 md:mb-2 md:gap-2">
         {icon}
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted md:text-[11px]">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted md:text-[11px]">
           {label}
         </span>
       </div>
-      <p className="text-lg font-bold tabular-nums text-foreground md:text-xl">{value}</p>
-      {sub && <p className="mt-0.5 text-[10px] text-muted/60">{sub}</p>}
+      <p className="text-xl font-bold tabular-nums text-foreground md:text-xl">{value}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted/60">{sub}</p>}
     </motion.div>
   );
 }

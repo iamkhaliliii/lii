@@ -315,14 +315,14 @@ export default function SettingsPage() {
     <div className="flex flex-col h-full bg-background">
       <Navbar />
       <main className="flex-1 overflow-y-auto chat-scroll page-scroll">
-        <div className="mx-auto max-w-3xl px-4 py-5 md:py-6">
-        <h1 className="mb-1 text-lg font-bold">Settings</h1>
-        <p className="mb-5 text-sm text-muted md:mb-6">
+        <div className="mx-auto max-w-3xl px-4 py-4 md:py-6">
+        <h1 className="mb-1 text-lg font-bold md:text-lg">Settings</h1>
+        <p className="mb-5 text-[13px] text-muted md:mb-6 md:text-sm">
           Configure providers and preferences
         </p>
 
         {/* Provider tabs */}
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+        <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
           AI Provider
         </p>
         <div className="mb-6 flex gap-0.5 border-b border-border">
@@ -337,7 +337,7 @@ export default function SettingsPage() {
                   setShowKey(false);
                   setTestResult(null);
                 }}
-                className={`relative px-3 py-2 text-sm font-medium transition-colors ${
+                className={`relative px-3 py-2.5 text-[13px] font-medium transition-colors md:py-2 md:text-sm ${
                   isActive
                     ? "text-primary"
                     : "text-muted hover:text-foreground"
@@ -357,7 +357,7 @@ export default function SettingsPage() {
 
         {/* API Key + Test */}
         <div className="mb-4 space-y-2">
-          <label className="text-sm font-medium">
+          <label className="text-[13px] font-medium md:text-sm">
             API Key
             <span className="ml-1.5 text-xs font-normal text-muted">
               {providerNames[activeTab]}
@@ -371,19 +371,19 @@ export default function SettingsPage() {
                 onChange={(e) => handleApiKeyChange(e.target.value)}
                 placeholder={`Enter your ${providerNames[activeTab]} API key`}
                 dir="ltr"
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 pr-10 text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+                className="w-full rounded-xl border border-border bg-card px-3 py-2.5 pr-10 text-[13px] focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10 md:rounded-lg md:py-2 md:text-sm"
               />
               <button
                 onClick={() => setShowKey(!showKey)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted hover:text-foreground"
+                className="absolute top-1/2 right-3 -translate-y-1/2 p-1 text-muted hover:text-foreground"
               >
-                {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             <button
               onClick={handleTestConnection}
               disabled={!currentConfig.apiKey || testing}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+              className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors disabled:opacity-40 md:rounded-lg md:px-3.5 md:py-2 md:text-sm ${
                 testResult === "success"
                   ? "bg-success-light text-success"
                   : testResult === "error"
@@ -392,11 +392,11 @@ export default function SettingsPage() {
               }`}
             >
               {testing ? (
-                <Loader2 size={13} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" />
               ) : testResult === "success" ? (
-                <CheckCircle size={13} />
+                <CheckCircle size={14} />
               ) : testResult === "error" ? (
-                <XCircle size={13} />
+                <XCircle size={14} />
               ) : null}
               Test
             </button>
@@ -405,11 +405,11 @@ export default function SettingsPage() {
 
         {/* Default Model */}
         <div className="mb-4 space-y-2">
-          <label className="text-sm font-medium">Default Model</label>
+          <label className="text-[13px] font-medium md:text-sm">Default Model</label>
           <select
             value={currentConfig.defaultModel}
             onChange={(e) => handleDefaultModelChange(e.target.value)}
-            className="w-full appearance-none rounded-lg border border-border bg-card px-3 py-2 text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10"
+            className="w-full appearance-none rounded-xl border border-border bg-card px-3 py-2.5 text-[13px] focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/10 md:rounded-lg md:py-2 md:text-sm"
           >
             {models.map((m) => (
               <option key={m.id} value={m.id}>
@@ -420,9 +420,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Set active */}
-        <div className="mb-8 flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+        <div className="mb-8 flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3.5 md:rounded-lg md:py-3">
           <div>
-            <p className="text-sm font-medium">Active Provider</p>
+            <p className="text-[13px] font-medium md:text-sm">Active Provider</p>
             <p className="text-xs text-muted">
               {settings.activeProvider === activeTab
                 ? "Currently active"
@@ -432,7 +432,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSetActive}
             disabled={settings.activeProvider === activeTab}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-xl px-4 py-2 text-[13px] font-medium transition-colors md:rounded-lg md:px-3 md:py-1.5 md:text-sm ${
               settings.activeProvider === activeTab
                 ? "bg-success-light text-success"
                 : "bg-primary text-background hover:bg-primary-hover"
@@ -443,12 +443,12 @@ export default function SettingsPage() {
         </div>
 
         {/* Appearance */}
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+        <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
           Appearance
         </p>
         <div className="mb-8 rounded-xl border border-border bg-card">
           <div className="px-4 py-4">
-            <p className="mb-3 text-sm font-medium">Theme</p>
+            <p className="mb-3 text-[13px] font-medium md:text-sm">Theme</p>
             <div className="grid grid-cols-3 gap-2">
               {([
                 { id: "light" as const, label: "Light", icon: Sun },
@@ -477,13 +477,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Preferences */}
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+        <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
           Preferences
         </p>
         <div className="mb-8 divide-y divide-border-subtle rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3 px-4 py-4 md:py-3.5">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Auto-detect tone</p>
+              <p className="text-[13px] font-medium md:text-sm">Auto-detect tone</p>
               <p className="text-xs text-muted">
                 Analyze formality, sentiment, and context
               </p>
@@ -497,9 +497,9 @@ export default function SettingsPage() {
               aria-checked={settings.autoDetectTone}
             />
           </div>
-          <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3 px-4 py-4 md:py-3.5">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Auto-suggest replies</p>
+              <p className="text-[13px] font-medium md:text-sm">Auto-suggest replies</p>
               <p className="text-xs text-muted">
                 Generate bilingual reply suggestions
               </p>
@@ -518,7 +518,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Integrations — Slack */}
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+        <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
           Integrations
         </p>
 
@@ -644,7 +644,7 @@ export default function SettingsPage() {
         {/* Account */}
         {user && (
           <>
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-muted/60 uppercase">
+            <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
               Account
             </p>
             <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">

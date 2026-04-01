@@ -52,8 +52,8 @@
   --duration-normal: 200ms;
   --duration-slow: 300ms;
 
-  /* Bottom nav height */
-  --bottom-nav-h: 4rem;
+  /* Bottom nav height — must match .bottom-nav-item min-height */
+  --bottom-nav-h: 52px;
 }
 
 /* ============================
@@ -461,7 +461,7 @@ html.dark .glass-bottom {
   justify-content: center;
   flex: 1;
   min-height: 52px;
-  gap: 2px;
+  gap: 3px;
   font-size: 10px;
   font-weight: 500;
   color: var(--muted);
@@ -487,7 +487,7 @@ html.dark .glass-bottom {
 /* Page content clearance for mobile bottom nav */
 @media (max-width: 767px) {
   .page-scroll {
-    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
   }
 }
 

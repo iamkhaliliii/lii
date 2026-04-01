@@ -161,7 +161,7 @@ export default function FlashcardDeck() {
                 setSessionDone(false);
               }}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors press",
+                "rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors press md:px-3 md:py-1.5 md:text-xs",
                 levelFilter === f.id
                   ? "bg-primary text-background"
                   : "bg-accent text-muted hover:text-foreground"
@@ -180,7 +180,7 @@ export default function FlashcardDeck() {
                 setFlipped(false);
                 setSessionDone(false);
               }}
-              className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground"
+              className="rounded-lg border border-border bg-card px-2.5 py-2 text-[13px] text-foreground md:px-2 md:py-1.5 md:text-xs"
             >
               <option value={0}>All units</option>
               {availableUnits.map((u) => (
@@ -195,7 +195,7 @@ export default function FlashcardDeck() {
         <button
           type="button"
           onClick={() => setDirection((d) => (d === "en_to_fa" ? "fa_to_en" : "en_to_fa"))}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground press"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-[13px] font-medium text-muted transition-colors hover:text-foreground press md:px-3 md:py-1.5 md:text-xs"
         >
           <ArrowLeftRight size={12} />
           {direction === "en_to_fa" ? "EN → FA" : "FA → EN"}
@@ -244,7 +244,7 @@ export default function FlashcardDeck() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="flex justify-center gap-2 md:gap-2"
+            className="flex justify-center gap-2.5 md:gap-2"
           >
             {RATING_BTNS.map((btn) => (
               <button
