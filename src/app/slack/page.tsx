@@ -355,7 +355,7 @@ export default function SlackPage() {
                 {/* Pinned section */}
                 {pinned.length > 0 && (
                   <div className="px-2 pt-3">
-                    <p className="mb-1 px-2 text-[10px] font-semibold tracking-wider text-muted/50 uppercase">
+                    <p className="mb-1 px-2 text-[11px] font-semibold tracking-wider text-muted/50 uppercase md:text-[10px]">
                       Pinned
                     </p>
                     {pinned.map((conv) => {
@@ -366,7 +366,7 @@ export default function SlackPage() {
                           <button
                             onClick={() => selectChannel(conv.id)}
                             className={cn(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150",
+                              "flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 md:gap-2.5 md:py-2",
                               isActive
                                 ? "bg-primary-muted sidebar-active-indicator"
                                 : "hover:bg-surface-hover"
@@ -378,25 +378,25 @@ export default function SlackPage() {
                               <img
                                 src={conv.avatarUrl}
                                 alt=""
-                                className="h-8 w-8 shrink-0 rounded-full object-cover"
+                                className="h-9 w-9 shrink-0 rounded-full object-cover md:h-8 md:w-8"
                               />
                             ) : (
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-muted">
-                                <Icon size={14} />
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-muted md:h-8 md:w-8">
+                                <Icon size={15} />
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
-                              <span className={cn("block truncate text-xs font-medium", isActive ? "text-primary" : "text-foreground")}>
+                              <span className={cn("block truncate text-[13px] font-medium md:text-xs", isActive ? "text-primary" : "text-foreground")}>
                                 {conv.type === "channel" || conv.type === "group" ? `#${conv.name}` : (conv.userName || conv.name)}
                               </span>
                               {conv.lastMessage && (
-                                <span className="block truncate text-[10px] text-muted/50 mt-0.5">
+                                <span className="block truncate text-[11px] text-muted/50 mt-0.5 md:text-[10px]">
                                   {conv.lastMessage}
                                 </span>
                               )}
                             </div>
                             {conv.lastTimestamp && (
-                              <span className="shrink-0 text-[9px] text-muted/40">
+                              <span className="shrink-0 text-[10px] text-muted/40 md:text-[9px]">
                                 {getTimeLabel(conv.lastTimestamp)}
                               </span>
                             )}
@@ -417,7 +417,7 @@ export default function SlackPage() {
                 {/* DMs section */}
                 {unpinnedDms.length > 0 && (
                   <div className="px-2 pt-3">
-                    <p className="mb-1 px-2 text-[10px] font-semibold tracking-wider text-muted/50 uppercase">
+                    <p className="mb-1 px-2 text-[11px] font-semibold tracking-wider text-muted/50 uppercase md:text-[10px]">
                       Direct Messages
                     </p>
                     {unpinnedDms.map((conv) => {
@@ -428,17 +428,17 @@ export default function SlackPage() {
                           <button
                             onClick={() => selectChannel(conv.id)}
                             className={cn(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150",
+                              "flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 md:gap-2.5 md:py-2",
                               isActive
                                 ? "bg-primary-muted sidebar-active-indicator"
                                 : "hover:bg-surface-hover"
                             )}
                           >
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-muted">
-                              <Icon size={13} />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-muted md:h-7 md:w-7">
+                              <Icon size={15} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className={cn("block truncate text-xs font-medium", isActive ? "text-primary" : "text-foreground")}>
+                              <span className={cn("block truncate text-[13px] font-medium md:text-xs", isActive ? "text-primary" : "text-foreground")}>
                                 {conv.userName || conv.name}
                               </span>
                             </div>
@@ -459,7 +459,7 @@ export default function SlackPage() {
                 {/* Channels section */}
                 {unpinnedChannels.length > 0 && (
                   <div className="px-2 pt-3">
-                    <p className="mb-1 px-2 text-[10px] font-semibold tracking-wider text-muted/50 uppercase">
+                    <p className="mb-1 px-2 text-[11px] font-semibold tracking-wider text-muted/50 uppercase md:text-[10px]">
                       Channels
                     </p>
                     {unpinnedChannels.map((conv) => {
@@ -469,17 +469,17 @@ export default function SlackPage() {
                           <button
                             onClick={() => selectChannel(conv.id)}
                             className={cn(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150",
+                              "flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 md:gap-2.5 md:py-2",
                               isActive
                                 ? "bg-primary-muted sidebar-active-indicator"
                                 : "hover:bg-surface-hover"
                             )}
                           >
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-muted">
-                              <Hash size={13} />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-muted md:h-7 md:w-7">
+                              <Hash size={15} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className={cn("block truncate text-xs font-medium", isActive ? "text-primary" : "text-foreground")}>
+                              <span className={cn("block truncate text-[13px] font-medium md:text-xs", isActive ? "text-primary" : "text-foreground")}>
                                 #{conv.name}
                               </span>
                             </div>
@@ -518,34 +518,34 @@ export default function SlackPage() {
           {activeConv ? (
             <>
               {/* Header */}
-              <div className="flex items-center gap-2 border-b border-border-subtle bg-card/50 px-3 py-3 backdrop-blur-sm md:gap-3 md:px-4">
+              <div className="flex items-center gap-2.5 border-b border-border-subtle bg-card/50 px-3 py-3 backdrop-blur-sm md:gap-3 md:px-4">
                 <button
                   onClick={clearActiveChannel}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent hover:text-foreground md:hidden"
                 >
-                  <ArrowLeft size={18} />
+                  <ArrowLeft size={20} />
                 </button>
                 {activeConv.type === "mpim" && activeConv.memberAvatars && activeConv.memberAvatars.length > 1 ? (
                   <AvatarStack urls={activeConv.memberAvatars} size={32} />
                 ) : activeConv.avatarUrl ? (
-                  <img src={activeConv.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  <img src={activeConv.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover md:h-8 md:w-8" />
                 ) : activeConv.type === "dm" ? (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-muted"><User size={15} /></div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-muted md:h-8 md:w-8"><User size={16} /></div>
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-muted"><Hash size={15} /></div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-muted md:h-8 md:w-8"><Hash size={16} /></div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-foreground">
+                  <span className="block truncate text-[15px] font-semibold text-foreground md:text-sm">
                     {activeConv.type === "channel" || activeConv.type === "group"
                       ? `#${activeConv.name}`
                       : activeConv.userName || activeConv.name}
                   </span>
                   {activeConv.type === "mpim" && (
-                    <span className="block truncate text-[10px] text-muted/50">Group message</span>
+                    <span className="block truncate text-[11px] text-muted/50 md:text-[10px]">Group message</span>
                   )}
                 </div>
                 {messages.length > 0 && (
-                  <span className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-muted/50">
+                  <span className="rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-medium text-muted/50 md:text-[10px]">
                     {messages.length} messages
                   </span>
                 )}
@@ -557,7 +557,7 @@ export default function SlackPage() {
                 onScroll={handleScroll}
                 className="relative flex-1 overflow-y-auto bg-background chat-scroll"
               >
-                <div className="mx-auto max-w-3xl px-2 py-3 md:px-4 md:py-4">
+                <div className="mx-auto max-w-3xl px-3 py-3 md:px-4 md:py-4">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 size={20} className="animate-spin text-muted" />
@@ -582,7 +582,7 @@ export default function SlackPage() {
                           {showDateSep && (
                             <div className="my-4 flex items-center gap-3">
                               <div className="h-px flex-1 bg-border-subtle" />
-                              <span className="text-[10px] font-medium text-muted/40">{getDateSeparator(msg.timestamp)}</span>
+                              <span className="text-[11px] font-medium text-muted/40 md:text-[10px]">{getDateSeparator(msg.timestamp)}</span>
                               <div className="h-px flex-1 bg-border-subtle" />
                             </div>
                           )}
@@ -593,8 +593,8 @@ export default function SlackPage() {
                             !grouped && i > 0 && !showDateSep && "mt-1"
                           )}>
                             {grouped ? (
-                              <div className="w-9 shrink-0 flex items-center justify-center">
-                                <span className="text-[9px] text-transparent group-hover:text-muted/40 transition-colors select-none">
+                              <div className="w-10 shrink-0 flex items-center justify-center md:w-9">
+                                <span className="text-[10px] text-transparent group-hover:text-muted/40 transition-colors select-none md:text-[9px]">
                                   {getMsgTime(msg.timestamp)}
                                 </span>
                               </div>
@@ -602,10 +602,10 @@ export default function SlackPage() {
                               <img
                                 src={msg.avatarUrl}
                                 alt=""
-                                className="mt-0.5 h-9 w-9 shrink-0 rounded-full object-cover"
+                                className="mt-0.5 h-10 w-10 shrink-0 rounded-full object-cover md:h-9 md:w-9"
                               />
                             ) : (
-                              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] font-bold text-muted">
+                              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold text-muted md:h-9 md:w-9 md:text-[12px]">
                                 {(msg.userName || msg.userId).charAt(0).toUpperCase()}
                               </div>
                             )}
@@ -613,10 +613,10 @@ export default function SlackPage() {
                             <div className="min-w-0 flex-1">
                               {!grouped && (
                                 <div className="flex items-baseline gap-2">
-                                  <span className="text-[13px] font-semibold text-foreground">
+                                  <span className="text-sm font-semibold text-foreground md:text-[13px]">
                                     {msg.userName || msg.userId}
                                   </span>
-                                  <span className="text-[10px] text-muted/40">
+                                  <span className="text-[11px] text-muted/40 md:text-[10px]">
                                     {getMsgTime(msg.timestamp)}
                                   </span>
                                 </div>
@@ -624,7 +624,7 @@ export default function SlackPage() {
                               <p
                                 dir="auto"
                                 className={cn(
-                                  "text-[13px] leading-relaxed text-foreground/85 whitespace-pre-wrap break-words",
+                                  "text-sm leading-relaxed text-foreground/85 whitespace-pre-wrap break-words md:text-[13px]",
                                   !grouped && "mt-0.5"
                                 )}
                               >
@@ -635,7 +635,7 @@ export default function SlackPage() {
                               {(msg.replyCount ?? 0) > 0 && !msg.isThread && activeChannelId && (
                                 <button
                                   onClick={() => loadThreadReplies(activeChannelId, msg.ts)}
-                                  className="mt-1.5 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-primary/70 hover:bg-primary-muted hover:text-primary transition-colors"
+                                  className="mt-1.5 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] font-medium text-primary/70 hover:bg-primary-muted hover:text-primary transition-colors md:py-1 md:text-[11px]"
                                 >
                                   {loadingThread === msg.ts ? (
                                     <Loader2 size={12} className="animate-spin" />
@@ -684,7 +684,7 @@ export default function SlackPage() {
                                         </button>
                                       </div>
                                     </div>
-                                    <p dir="auto" className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap">{translations[msg.ts].text}</p>
+                                    <p dir="auto" className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap md:text-[13px]">{translations[msg.ts].text}</p>
                                   </div>
 
                                   {/* Suggested replies + custom */}
@@ -700,8 +700,8 @@ export default function SlackPage() {
                                           className="group/sug flex items-start gap-2 rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-emerald-500/10 hover:bg-emerald-500/[0.04]"
                                         >
                                           <div className="min-w-0 flex-1">
-                                            <p className="text-[12px] leading-relaxed text-foreground/85">{s.english}</p>
-                                            <p dir="rtl" className="mt-0.5 text-[11px] leading-relaxed text-muted/60">{s.farsi}</p>
+                                            <p className="text-[13px] leading-relaxed text-foreground/85 md:text-[12px]">{s.english}</p>
+                                            <p dir="rtl" className="mt-0.5 text-[12px] leading-relaxed text-muted/60 md:text-[11px]">{s.farsi}</p>
                                           </div>
                                           <div className="flex shrink-0 items-center gap-0.5 pt-0.5 opacity-0 group-hover/sug:opacity-100 transition-opacity">
                                             <button
@@ -726,8 +726,8 @@ export default function SlackPage() {
                                       <div className="mt-1 border-t border-emerald-500/10 pt-2">
                                         <div className="flex items-center gap-1.5 mb-1.5">
                                           <Sparkles size={10} className="text-amber-500/70" />
-                                          <span className="text-[10px] font-medium text-amber-600/60">Write your own</span>
-                                          <span className="text-[9px] text-muted/40">Farsi · Finglish · English</span>
+                                          <span className="text-[11px] font-medium text-amber-600/60 md:text-[10px]">Write your own</span>
+                                          <span className="text-[10px] text-muted/40 md:text-[9px]">Farsi · Finglish · English</span>
                                         </div>
                                         <div className="flex items-end gap-1.5">
                                           <input
@@ -736,12 +736,12 @@ export default function SlackPage() {
                                             onChange={(e) => setCustomDraft((p) => ({ ...p, [msg.ts]: e.target.value }))}
                                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handlePolish(msg.ts, msg.text); } }}
                                             placeholder="benevis… / type here…"
-                                            className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted/40 focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/10"
+                                            className="flex-1 rounded-md border border-border bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/10 md:py-1.5 md:text-[12px]"
                                           />
                                           <button
                                             onClick={() => handlePolish(msg.ts, msg.text)}
                                             disabled={!customDraft[msg.ts]?.trim() || polishing === msg.ts}
-                                            className="flex h-[30px] items-center gap-1 rounded-md bg-amber-500 px-2.5 text-[10px] font-medium text-white transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            className="flex h-[34px] items-center gap-1 rounded-md bg-amber-500 px-3 text-[11px] font-medium text-white transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed md:h-[30px] md:px-2.5 md:text-[10px]"
                                           >
                                             {polishing === msg.ts ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
                                             Polish
@@ -751,8 +751,8 @@ export default function SlackPage() {
                                           <div className="mt-2 rounded-md border border-amber-500/15 bg-amber-500/[0.04] px-2.5 py-2">
                                             <div className="flex items-start gap-2">
                                               <div className="min-w-0 flex-1">
-                                                <p className="text-[12px] leading-relaxed text-foreground/90">{polished[msg.ts].english}</p>
-                                                <p dir="rtl" className="mt-1 text-[11px] leading-relaxed text-muted/60">{polished[msg.ts].farsi}</p>
+                                                <p className="text-[13px] leading-relaxed text-foreground/90 md:text-[12px]">{polished[msg.ts].english}</p>
+                                                <p dir="rtl" className="mt-1 text-[12px] leading-relaxed text-muted/60 md:text-[11px]">{polished[msg.ts].farsi}</p>
                                               </div>
                                               <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
                                                 <button
@@ -813,22 +813,22 @@ export default function SlackPage() {
                                   className="group/reply relative flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-hover"
                                 >
                                   {reply.avatarUrl ? (
-                                    <img src={reply.avatarUrl} alt="" className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover" />
+                                    <img src={reply.avatarUrl} alt="" className="mt-0.5 h-8 w-8 shrink-0 rounded-full object-cover md:h-7 md:w-7" />
                                   ) : (
-                                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-muted">
+                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-muted md:h-7 md:w-7 md:text-[10px]">
                                       {(reply.userName || reply.userId).charAt(0).toUpperCase()}
                                     </div>
                                   )}
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-baseline gap-2">
-                                      <span className="text-[12px] font-semibold text-foreground">
+                                      <span className="text-[13px] font-semibold text-foreground md:text-[12px]">
                                         {reply.userName || reply.userId}
                                       </span>
-                                      <span className="text-[9px] text-muted/40">
+                                      <span className="text-[10px] text-muted/40 md:text-[9px]">
                                         {getMsgTime(reply.timestamp)}
                                       </span>
                                     </div>
-                                    <p dir="auto" className="mt-0.5 text-[12px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
+                                    <p dir="auto" className="mt-0.5 text-[13px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words md:text-[12px]">
                                       {reply.text}
                                     </p>
 
@@ -997,7 +997,7 @@ export default function SlackPage() {
               </main>
 
               {/* Quick reply input */}
-              <div className="border-t border-border-subtle bg-background px-3 py-2 md:px-4 md:py-2.5">
+              <div className="border-t border-border-subtle bg-background px-3 py-2.5 md:px-4 md:py-2.5">
                 <div className="flex items-end gap-2">
                   <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/10">
                     <textarea
@@ -1012,20 +1012,20 @@ export default function SlackPage() {
                       placeholder="Reply in Slack…"
                       dir="auto"
                       rows={1}
-                      className="w-full resize-none border-0 bg-transparent px-3.5 py-2.5 text-sm leading-relaxed text-foreground placeholder:text-muted/40 focus:outline-none"
+                      className="w-full resize-none border-0 bg-transparent px-3.5 py-2.5 text-[15px] leading-relaxed text-foreground placeholder:text-muted/40 focus:outline-none md:text-sm"
                       style={{ maxHeight: 100 }}
                     />
                   </div>
                   <button
                     onClick={handleSendReply}
                     disabled={!replyText.trim() || sending}
-                    className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-background transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-background transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed md:h-9 md:w-9"
                     title="Send to Slack"
                   >
                     {sending ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                     ) : (
-                      <Send size={14} />
+                      <Send size={16} />
                     )}
                   </button>
                 </div>

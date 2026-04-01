@@ -67,13 +67,13 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       : 0;
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-6">
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-2.5 md:gap-3">
+      <div className="grid grid-cols-2 gap-2 md:gap-3">
         <button
           type="button"
           onClick={onStartFlashcards}
-          className="group flex flex-col items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-row md:items-center md:gap-4 md:p-5"
+          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-col md:items-start md:gap-4 md:rounded-2xl md:p-5"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/8 transition-colors group-hover:bg-primary/15 md:h-11 md:w-11">
             <Zap size={18} className="text-primary/70" />
@@ -94,7 +94,7 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
         <button
           type="button"
           onClick={onStartQuiz}
-          className="group flex flex-col items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-row md:items-center md:gap-4 md:p-5"
+          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3 text-left transition-all hover:border-primary/30 hover:shadow-sm press md:flex-col md:items-start md:gap-4 md:rounded-2xl md:p-5"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/10 transition-colors group-hover:bg-success/20 md:h-11 md:w-11">
             <Sparkles size={18} className="text-success" />
@@ -109,7 +109,7 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
+      <div className="grid grid-cols-4 gap-1.5 md:gap-3">
         <StatCard
           icon={<Flame size={16} className="text-warning" />}
           label="Streak"
@@ -137,9 +137,9 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       </div>
 
       {/* Level progress */}
-      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
-        <h3 className="mb-3 text-[13px] font-semibold text-foreground md:mb-4 md:text-sm">Level Progress</h3>
-        <div className="space-y-3.5 md:space-y-4">
+      <div className="rounded-xl border border-border/60 bg-card p-3.5 md:rounded-2xl md:p-5">
+        <h3 className="mb-2.5 text-[13px] font-semibold text-foreground md:mb-4 md:text-sm">Level Progress</h3>
+        <div className="space-y-3 md:space-y-4">
           {LEVELS.map((lvl) => {
             const levelCards = lvl.units.reduce((acc, u) => acc + u.cards.length, 0);
             const bd = progress.levelBreakdown[lvl.level];
@@ -189,7 +189,7 @@ export default function Dashboard({ onStartFlashcards, onStartQuiz }: Props) {
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+      <div className="rounded-xl border border-border/60 bg-card p-3.5 md:rounded-2xl md:p-5">
         <h3 className="mb-3 text-[13px] font-semibold text-foreground md:mb-4 md:text-sm">
           Last 30 Days
         </h3>
@@ -215,16 +215,16 @@ function StatCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="rounded-2xl border border-border/60 bg-card p-3 md:p-4"
+      className="rounded-xl border border-border/60 bg-card px-2.5 py-2.5 md:rounded-2xl md:p-4"
     >
-      <div className="mb-1.5 flex items-center gap-1.5 md:mb-2 md:gap-2">
+      <div className="mb-1 flex items-center gap-1 md:mb-2 md:gap-2">
         {icon}
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted md:text-[11px]">
+        <span className="text-[9px] font-semibold uppercase tracking-wide text-muted md:text-[11px]">
           {label}
         </span>
       </div>
-      <p className="text-xl font-bold tabular-nums text-foreground md:text-xl">{value}</p>
-      {sub && <p className="mt-0.5 text-[11px] text-muted/60">{sub}</p>}
+      <p className="text-base font-bold tabular-nums text-foreground md:text-xl">{value}</p>
+      {sub && <p className="mt-0.5 text-[9px] text-muted/60 md:text-[11px]">{sub}</p>}
     </motion.div>
   );
 }

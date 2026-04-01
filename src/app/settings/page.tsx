@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TranslationRule } from "@/types";
@@ -262,6 +263,23 @@ export default function SettingsPage() {
       toast.error(msg);
     } finally {
       setSlackTesting(false);
+    }
+  };
+
+  const [updating, setUpdating] = useState(false);
+
+  const handleUpdateApp = async () => {
+    setUpdating(true);
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((r) => r.unregister()));
+      }
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      window.location.reload();
+    } catch {
+      window.location.reload();
     }
   };
 
@@ -640,6 +658,29 @@ export default function SettingsPage() {
           rules={settings.rules || []}
           onUpdate={(rules) => updateSettings({ rules })}
         />
+
+        {/* App Update */}
+        <p className="mb-2 text-xs font-medium tracking-wide text-muted/60 uppercase md:text-[11px]">
+          App
+        </p>
+        <div className="mb-8 rounded-xl border border-border bg-card md:rounded-lg">
+          <div className="flex items-center justify-between gap-3 px-4 py-4 md:py-3.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium md:text-sm">Update App</p>
+              <p className="text-xs text-muted">
+                Clear cache and reload to get the latest version
+              </p>
+            </div>
+            <button
+              onClick={handleUpdateApp}
+              disabled={updating}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-medium text-background transition-all hover:bg-primary-hover active:scale-95 disabled:opacity-50 press md:rounded-lg md:px-3.5 md:py-2 md:text-sm"
+            >
+              <RefreshCw size={14} className={updating ? "animate-spin" : ""} />
+              {updating ? "Updating…" : "Update"}
+            </button>
+          </div>
+        </div>
 
         {/* Account */}
         {user && (
